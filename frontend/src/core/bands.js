@@ -17,7 +17,7 @@ export const SECTIONS = [
     fields: [
       { name: 'amount', label: 'Amount', type: 'number', policy: 'range', band: 'loan', required: true, min: 100, money: true },
       { name: 'purpose', label: 'Purpose', type: 'select', options: ['home', 'auto', 'personal', 'business', 'education', 'debt-consolidation', 'other'], policy: 'asis' },
-      { name: 'termMonths', label: 'Term (months)', type: 'number', policy: 'asis', required: true, min: 6, max: 360 },
+      { name: 'termMonths', label: 'Term (months)', type: 'number', policy: 'asis', min: 6, max: 360 },
       { name: 'propertyPrice', label: 'Property price', type: 'number', policy: 'range', band: 'ltv', money: true, hint: 'Home loans' },
       { name: 'occupancy', label: 'Use', type: 'select', options: ['Primary home', 'Second home', 'Investment'], policy: 'asis' },
     ],
@@ -27,7 +27,7 @@ export const SECTIONS = [
     title: 'Your finances',
     fields: [
       { name: 'annualIncome', label: 'Annual income', type: 'number', policy: 'range', band: 'dti', required: true, money: true },
-      { name: 'monthlyDebt', label: 'Debt payments / month', type: 'number', policy: 'range', band: 'dti', money: true },
+      { name: 'monthlyDebt', label: 'Debt payments / month', type: 'number', policy: 'range', band: 'dti', money: true, required: true },
       { name: 'totalAssets', label: 'Savings and assets', type: 'number', policy: 'range', band: 'asset', money: true },
       { name: 'creditScore', label: 'Credit score', type: 'number', policy: 'range', band: 'fico', required: true, min: 300, max: 850, hint: 'Bureau confirms the range' },
       { name: 'employmentStatus', label: 'Employment', type: 'select', options: ['employed', 'self-employed', 'unemployed', 'retired', 'student'], policy: 'asis' },
@@ -205,4 +205,22 @@ export const EMPTY_FORM = Object.fromEntries(ALL_FIELDS.map((f) => [f.name, DEFA
 /** The private half of the mandate. Never leaves the device; the agent scores offers against it. */
 export function mandateOf(form) {
   return { priority: form.priority, horizonYears: n(form.horizonYears) || 7, maxPayment: n(form.maxPayment) || null, cashToClose: n(form.cashToClose) || null, noPrepayPenalty: form.noPrepayPenalty || 'Nice to have', walkAwayRate: n(form.walkAwayRate) || null };
+}
+
+/**
+ * Documents a user can drop in. Each one is read on the device and only the
+ * resulting range leaves. For the wireframe the "reading" is simulated: the
+ * file name picks the type, and sample values fill any empty field. The real
+ * version runs local OCR / parsing in the browser and never uploads the file.
+ */
+export const DOC_TYPES = [
+  { id: 'paystub', label: 'Pay stub or W-2', match: /pay|stub|w-?2|1040|tax|income/i, fills: { annualIncome: 142000, employmentStatus: 'employed' }, verifies: ['annualIncome', 'employmentStatus'], note: 'Income confirmed' },
+  { id: 'statement', label: 'Bank statement', match: /statement|bank|checking|savings|brokerage/i, fills: { totalAssets: 218400, cashToClose: 25000 }, verifies: ['totalAssets'], note: 'Assets confirmed' },
+  { id: 'credit', label: 'Credit report', match: /credit|report|fico|experian|equifax|transunion/i, fills: { creditScore: 752, monthlyDebt: 3850 }, verifies: ['creditScore', 'monthlyDebt'], note: 'Score and debts confirmed' },
+  { id: 'id', label: 'Photo ID', match: /id|license|licence|passport|dl/i, fills: { fullName: 'Maya R. Okafor', state: 'CA', ssnLast4: '4471' }, verifies: ['fullName', 'state'], note: 'Identity confirmed' },
+  { id: 'purchase', label: 'Purchase agreement or appraisal', match: /purchase|contract|appraisal|offer|listing|property/i, fills: { propertyPrice: 850000, amount: 680000, purpose: 'home', occupancy: 'Primary home' }, verifies: ['propertyPrice', 'amount'], note: 'Property and loan confirmed' },
+];
+
+export function classifyDoc(fileName) {
+  return DOC_TYPES.find((d) => d.match.test(fileName)) || null;
 }
