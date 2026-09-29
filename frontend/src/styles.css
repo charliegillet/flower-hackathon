@@ -303,3 +303,8 @@ label.check input { width: 16px; height: 16px; }
   .rank-row { grid-template-columns: 24px 24px minmax(0, 1fr) 70px 100px auto; }
   .rank-row .note, .rank-row .m:nth-of-type(2) { display: none; }
 }
+
+/* Flower engine badge + coordinator explanation (flower-integration) */
+.engine { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; font-size: 12px; }
+.narrative { margin: 10px 0 0; padding: 10px 12px; border: 1px solid var(--line, #E3E8EF); border-radius: 8px; background: #fff; font-size: 13px; line-height: 1.5; }
+.narrative p { margin: 4px 0 0; white-space: pre-wrap; }
