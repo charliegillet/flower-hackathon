@@ -219,3 +219,8 @@ __marimo__/
 
 # oh-my-claudecode state
 .omc/
+
+# BlindQuote local secrets and runtime state
+secrets/
+keys/
+.flwr-local/
