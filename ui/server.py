@@ -51,8 +51,11 @@ FORWARD_PREFIXES = ("bq.", "response.output_text.delta", "response.completed")
 
 
 class RunRequest(BaseModel):
-    mode: str
-    prompt: str
+    # mode defaults to BQ_MODE (local | supergrid | sim) so callers like the Node backend need not choose.
+    mode: str | None = None
+    prompt: str | None = None
+    # Structured request from the borrower's device: {"bands": {...}, "consent_token", "horizon_years"}.
+    request: dict[str, Any] | None = None
 
 
 def _port_open(host: str, port: int) -> bool:
@@ -76,6 +79,7 @@ def _connection_configured(name: str) -> bool:
 @app.get("/api/status")
 def status() -> dict[str, Any]:
     return {
+        "default_mode": os.environ.get("BQ_MODE", "local"),
         "modes": {
             "sim": True,
             # local SuperLink Control API listens on 127.0.0.1:8000 (so the UI uses 8765)
@@ -148,13 +152,20 @@ def _worker(mode: str, prompt: str, q: queue.Queue) -> None:
 
 @app.post("/api/runs")
 def create_run(req: RunRequest) -> dict[str, str]:
-    if req.mode not in {"sim", "local", "supergrid"}:
-        raise HTTPException(400, f"unknown mode {req.mode!r}")
+    mode = req.mode or os.environ.get("BQ_MODE", "local")
+    if mode not in {"sim", "local", "supergrid"}:
+        raise HTTPException(400, f"unknown mode {mode!r}")
+    if req.request is not None:
+        prompt = json.dumps({"blindquote_request": req.request}, separators=(",", ":"))
+    elif req.prompt:
+        prompt = req.prompt
+    else:
+        raise HTTPException(400, "send a prompt or a request")
     run_id = uuid.uuid4().hex[:12]
     q: queue.Queue = queue.Queue()
     _runs[run_id] = q
-    threading.Thread(target=_worker, args=(req.mode, req.prompt, q), daemon=True).start()
-    return {"run_id": run_id}
+    threading.Thread(target=_worker, args=(mode, prompt, q), daemon=True).start()
+    return {"run_id": run_id, "mode": mode}
 
 
 @app.get("/api/runs/{run_id}/events")
