@@ -11,7 +11,7 @@ export default function ApplicationList({ applications, selectedId, onSelect }) 
           onClick={() => onSelect(a._id)}
         >
           <div className="list-item-top">
-            <strong>{a.applicant.name}</strong>
+            <strong>{a.applicant.name || `Applicant ${a.applicant.code}`}</strong>
             <span className={`badge ${a.status}`}>{a.status}</span>
           </div>
           <div className="list-item-sub">

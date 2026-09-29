@@ -2,6 +2,10 @@ import { Router } from 'express';
 import { Application } from '../models/Application.js';
 import { runNegotiation } from '../agents/conversation.js';
 import { requireAuth, requireRole } from '../auth.js';
+import { bankView, bandsOf } from '../agents/bands.js';
+
+// Bank accounts never receive identity or exact figures.
+const forUser = (req, app) => (req.user.role === 'bank' ? bankView(app) : app);
 
 const router = Router();
 router.use(requireAuth);
@@ -23,10 +27,13 @@ router.post('/', requireRole('customer'), async (req, res, next) => {
 router.get('/', async (req, res, next) => {
   try {
     const filter = req.user.role === 'bank' ? {} : { user: req.user._id };
+    const isBank = req.user.role === 'bank';
     const apps = await Application.find(filter)
-      .select('applicant.name applicant.email loan status evaluation.decision bankDecision.decision createdAt')
+      .select(isBank
+        ? 'applicant.annualIncome applicant.monthlyDebt applicant.totalAssets applicant.creditScore applicant.employmentStatus loan status evaluation.decision bankDecision.decision createdAt'
+        : 'applicant.name applicant.email loan status evaluation.decision bankDecision.decision createdAt')
       .sort({ createdAt: -1 });
-    res.json(apps);
+    res.json(isBank ? apps.map((a) => { const d = a.toObject(); return { ...d, applicant: { code: bandsOf(d).code, bands: bandsOf(d) } }; }) : apps);
   } catch (err) {
     next(err);
   }
@@ -48,7 +55,7 @@ async function loadAuthorized(req, res) {
 router.get('/:id', async (req, res, next) => {
   try {
     const app = await loadAuthorized(req, res);
-    if (app) res.json(app);
+    if (app) res.json(forUser(req, app));
   } catch (err) {
     next(err);
   }
@@ -71,7 +78,7 @@ router.post('/:id/decision', requireRole('bank'), async (req, res, next) => {
       text: `Banker ${req.user.name} ${decision} the application.${note ? ` Note: ${note}` : ''}`,
     });
     await app.save();
-    res.json(app);
+    res.json(forUser(req, app));
   } catch (err) {
     next(err);
   }

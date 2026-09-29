@@ -1,18 +1,20 @@
 import { chat } from './llm.js';
+import { bandsOf } from './bands.js';
 
 /** Opening message when the client's agent submits the application. */
 export async function clientAgentIntro(app) {
-  const { applicant, loan } = app;
+  const { loan } = app;
+  // The bank's agent only ever hears ranges and a one-time code. Exact figures stay on our side.
+  const b = bandsOf(app);
   const fallback =
-    `Hello — I represent ${applicant.name}. We'd like to request a ${loan.purpose} loan of ` +
-    `$${loan.amount.toLocaleString()} over ${loan.termMonths} months. Annual income ` +
-    `$${applicant.annualIncome.toLocaleString()}, monthly debt $${applicant.monthlyDebt.toLocaleString()}, ` +
-    `credit score ${applicant.creditScore ?? 'n/a'}, employment: ${applicant.employmentStatus}.`;
+    `Hello — I represent applicant ${b.code}. We'd like to request a ${loan.purpose} loan in the ` +
+    `${b.loanBand || 'requested'} range over ${loan.termMonths} months. Debt vs. income ${b.dtiBand || 'n/a'}, ` +
+    `credit range ${b.ficoBand || 'n/a'}, employment: ${b.employmentStatus || 'n/a'}.`;
 
   const llmText = await chat({
     instructions:
-      'You are an agent acting for a loan applicant. Introduce the application to the bank\'s agent in 2-3 sentences, presenting the figures factually and making a brief case for approval. Never invent numbers.',
-    input: JSON.stringify({ applicant, loan }),
+      'You are an agent acting for a loan applicant. Introduce the application to the bank\'s agent in 2-3 sentences using ONLY the ranges given. Never state a name, an exact income, debt or credit score, and never invent numbers.',
+    input: JSON.stringify({ applicant: b, loan: { purpose: loan.purpose, termMonths: loan.termMonths, loanBand: b.loanBand } }),
   });
   return llmText ?? fallback;
 }

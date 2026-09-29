@@ -114,13 +114,22 @@ export default function ApplicationDetail({ application, user, onUpdated }) {
   return (
     <div className="detail">
       <h2>
-        {applicant.name} — ${loan.amount.toLocaleString()} {loan.purpose} loan
+        {applicant.name || `Applicant ${applicant.code}`} — ${loan.amount.toLocaleString()} {loan.purpose} loan
       </h2>
-      <p className="muted">
-        Income ${applicant.annualIncome.toLocaleString()}/yr · debt ${applicant.monthlyDebt.toLocaleString()}/mo ·
-        credit {applicant.creditScore} · {applicant.employmentStatus} ·{' '}
-        <span className={`badge ${application.status}`}>{application.status}</span>
-      </p>
+      {applicant.bands ? (
+        <p className="muted">
+          Ranges only · debt vs. income {applicant.bands.dtiBand || 'n/a'} · credit {applicant.bands.ficoBand || 'n/a'} ·
+          assets {applicant.bands.assetBand || 'n/a'} · {applicant.bands.employmentStatus} ·{' '}
+          <span className={`badge ${application.status}`}>{application.status}</span>
+        </p>
+      ) : (
+        <p className="muted">
+          Income ${applicant.annualIncome.toLocaleString()}/yr · debt ${applicant.monthlyDebt.toLocaleString()}/mo ·
+          credit {applicant.creditScore} · {applicant.employmentStatus} ·{' '}
+          <span className={`badge ${application.status}`}>{application.status}</span>
+        </p>
+      )}
+      {isBank && <p className="muted">You are seeing this applicant as a code and ranges. Name, contact and exact figures are withheld by the server until the applicant accepts your offer.</p>}
 
       <BankDecision bankDecision={application.bankDecision} />
       <Evaluation evaluation={application.evaluation} />
