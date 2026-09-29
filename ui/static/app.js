@@ -444,7 +444,11 @@ function renderVerdict() {
 function renderNarrative() {
   const box = $("#narrative");
   if (!state.narrative) { box.innerHTML = ""; return; }
-  const paras = state.narrative.split(/\n{2,}/).map((p) => esc(p).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/\n/g, "<br>"));
+  // The coordinator also sends a markdown heading and table for `flwr chat`;
+  // the verdict table above already shows them, so keep only the prose.
+  const prose = state.narrative.split("\n").filter((l) => !/^\s*(#|\|)/.test(l)).join("\n").trim();
+  if (!prose) { box.innerHTML = ""; return; }
+  const paras = prose.split(/\n{2,}/).map((p) => esc(p).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/\n/g, "<br>"));
   const caret = state.narrativeDone ? "" : '<span class="caret" aria-hidden="true"></span>';
   box.innerHTML = `<div class="by">The coordinator's explanation</div>` + paras.map((p, i) => `<p>${p}${i === paras.length - 1 ? caret : ""}</p>`).join("");
 }
