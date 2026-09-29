@@ -219,3 +219,9 @@ __marimo__/
 
 # oh-my-claudecode state
 .omc/
+
+# --- Node ---
+node_modules/
+
+# Local mongo scratch dir
+.mongo-data/
