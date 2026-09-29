@@ -49,6 +49,10 @@ router.post('/runs', async (req, res) => {
   const { bands, horizonYears, consentToken } = req.body || {};
   const clean = sanitizeBands(bands);
   if (!clean.loanBand || !clean.ficoBand) return res.status(400).json({ error: 'Sealed bands are required' });
+  // The Flower engine prices home loans from loan, LTV, DTI and credit bands; anything else uses the simulation.
+  if ((clean.purpose && clean.purpose !== 'home') || !clean.ltvBand || !clean.dtiBand) {
+    return res.status(422).json({ error: 'Flower prices home loans with a property price', unsupported: true });
+  }
   const now = Date.now();
   const active = [...runs.values()].filter((run) => isActive(run, now));
   if (active.some((run) => run.userId === String(req.user._id))) {
