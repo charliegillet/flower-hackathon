@@ -38,7 +38,8 @@ router.get('/status', async (_req, res) => {
   try {
     const r = await fetch(`${BRIDGE}/api/status`, { signal: AbortSignal.timeout(3000) });
     const body = await r.json();
-    res.json({ available: r.ok, mode: body.default_mode, modes: body.modes });
+    // Available only if the bridge answers AND its federation for the default mode is up.
+    res.json({ available: r.ok && Boolean(body.modes?.[body.default_mode]), mode: body.default_mode, modes: body.modes });
   } catch {
     res.json({ available: false });
   }
@@ -81,7 +82,7 @@ router.get('/runs/:id/events', async (req, res) => {
   const run = runs.get(req.params.id);
   if (!run || run.userId !== String(req.user._id)) return res.status(404).json({ error: 'Unknown run' });
   const ctrl = new AbortController();
-  req.on('close', () => ctrl.abort());
+  res.on('close', () => ctrl.abort());
   try {
     const upstream = await fetch(`${BRIDGE}/api/runs/${encodeURIComponent(req.params.id)}/events`, { signal: ctrl.signal });
     if (!upstream.ok || !upstream.body) return res.status(502).json({ error: 'Run stream unavailable' });
