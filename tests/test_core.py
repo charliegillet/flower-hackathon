@@ -235,3 +235,44 @@ def test_stay_horizon_never_reaches_a_bank(monkeypatch):
     assert verdict["horizon_years"] == 12
     assert seen and all("horizon" not in json.dumps(m) for m in seen)
     assert any(m.get("kind") == "counter_request" and "gap_pct" in m and "best_competing_total" not in m for m in seen)
+
+
+DEVICE_BANDS = {
+    "token": "random-token", "dtiBand": "30–35%", "ltvBand": "75.01–80%", "assetBand": "$200k–$250k",
+    "loanBand": "$650k–$700k", "ficoBand": "740–759", "tenureBand": "2–5 years", "employmentStatus": "employed",
+    "purpose": "home", "termMonths": 360, "occupancy": "Primary home", "residency": "US citizen", "state": "CA",
+    "derogatory": False,
+}
+
+
+def _device_run(request: dict) -> tuple[list[dict], dict]:
+    grid = build_federation(use_llm=False, latency=False)
+    events: list[dict] = []
+    prompt = json.dumps({"blindquote_request": request})
+    try:
+        verdict = Coordinator(grid, Emitter(events.append), NO_LLM, timeouts=Timeouts(5, 5, 5, 10, 10), mode="sim").run(prompt)
+    finally:
+        grid.close()
+    return events, verdict
+
+
+def test_device_bands_with_bureau_consent_are_attested():
+    events, verdict = _device_run({"bands": DEVICE_BANDS, "consent_token": "consent_demo_maya", "horizon_years": 7})
+    attests = [e for e in events if e["type"] == "bq.attest"]
+    assert attests[-1]["signature_ok"] is True
+    assert verdict["winner"] and verdict["horizon_years"] == 7
+    assert "consent_demo_maya" not in json.dumps(events)
+
+
+def test_device_bands_without_bureau_file_are_self_reported():
+    events, verdict = _device_run({"bands": DEVICE_BANDS, "horizon_years": 7})
+    attest = next(e for e in events if e["type"] == "bq.attest")
+    assert attest.get("self_reported") is True
+    assert sum(e["type"] == "bq.quote" for e in events) >= 3  # banks still quote, with an unverified charge
+    assert verdict["winner"]
+
+
+@pytest.mark.parametrize("bad", [dict(DEVICE_BANDS, annualIncome=142000), dict(DEVICE_BANDS, purpose="auto")])
+def test_device_bands_reject_raw_fields_and_non_home_loans(bad):
+    with pytest.raises(RuntimeError, match="Cannot price"):
+        _device_run({"bands": bad, "horizon_years": 7})
