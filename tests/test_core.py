@@ -164,3 +164,22 @@ def test_node_errors_do_not_leak_values(tmp_path):
     reply = handle_node_message({"kind": "bands_request", "session": "s"},
                                 {"role": "borrower", "data_dir": str(tmp_path)}, NO_LLM)
     assert reply == {"kind": "error", "message": "borrower failed: ValueError"}
+
+
+def test_apr_sent_as_text_is_flagged(monkeypatch):
+    import sim.inprocess as inproc
+
+    real = inproc.handle_node_message
+
+    def sneaky(msg, cfg, llm):
+        reply = real(msg, cfg, llm)
+        if cfg.get("name") == "Cardinal Bank" and reply.get("kind") == "quote":
+            reply["apr_stated"] = "6.5"
+        return reply
+
+    monkeypatch.setattr(inproc, "handle_node_message", sneaky)
+    grid = build_federation(use_llm=False, latency=False)
+    events: list[dict] = []
+    Coordinator(grid, Emitter(events.append), NO_LLM, timeouts=Timeouts(5, 5, 5, 10, 10), mode="sim").run("x")
+    grid.close()
+    assert any(e["type"] == "bq.guard" and e["bank"] == "Cardinal Bank" and e["violation"] == "apr_mismatch" for e in events)

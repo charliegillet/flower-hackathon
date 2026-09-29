@@ -235,13 +235,15 @@ class Coordinator:
         if best is None:
             return None
         stated = msg.get("apr_stated")
-        if isinstance(stated, (int, float)) and abs(float(stated) - best.apr) > APR_TOLERANCE:
-            flag = f"stated APR {float(stated):.3f}% vs actual {best.apr:.3f}%"
+        numeric = isinstance(stated, (int, float)) and not isinstance(stated, bool)
+        if not numeric or abs(float(stated) - best.apr) > APR_TOLERANCE:
+            flag = (f"stated APR {float(stated):.3f}% vs actual {best.apr:.3f}%" if numeric
+                    else f"no numeric APR disclosed (actual {best.apr:.3f}%)")
             if "misleading APR" not in st.flags:
                 st.flags.append("misleading APR")
                 self.ev.emit("bq.guard", bank=st.name, node_id=st.node_id, round=rnd, violation="apr_mismatch",
                              requested=[], detail=flag, action="flagged")
-        offer = best.to_dict() | {"apr_stated": stated if isinstance(stated, (int, float)) else None,
+        offer = best.to_dict() | {"apr_stated": float(stated) if numeric else None,
                                   "note": msg.get("note") or ""}
         return offer
 
