@@ -5,6 +5,24 @@ import { Lock, Check, Arrow, Spinner, Shield } from './Icons.jsx';
 
 const money = (v) => `$${Math.round(v).toLocaleString()}`;
 
+// A real email, drafted by the agent, sent by the user. It carries the applicant
+// code and the offer terms only: no name, income, assets, score or ceiling.
+function offerMailto(listing, price, bands) {
+  const subject = `Offer on ${listing.address}: ${money(price)}`;
+  const body = [
+    `To the listing agent for ${listing.address},`,
+    '',
+    `On behalf of applicant ${bands.token || 'code pending'}, we submit an offer of ${money(price)}.`,
+    'Terms: 21-day close, no repair credits, appraisal contingency only.',
+    'Financing: pre-qualified with six lenders on bureau-signed ranges; a lender letter follows on acceptance.',
+    '',
+    'Reply to this email to accept, counter with a price, or decline. The buyer\'s identity is released on acceptance only.',
+    '',
+    'Flower Finance, buyer\'s agent',
+  ].join('\n');
+  return `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
 export default function StageHome({ form, bands, onDone, onSkip }) {
   const listings = findListings(form);
   const [picked, setPicked] = useState(null);
@@ -87,6 +105,8 @@ export default function StageHome({ form, bands, onDone, onSkip }) {
                 </div>
                 <div className="note"><Lock width={14} height={14} /><span>Only the new ranges go to the lenders. The seller's agent never saw your budget; the lenders never see the address.</span></div>
                 <div className="stage-foot" style={{ padding: '12px 0 0' }}>
+                  <a className="btn ghost" href={offerMailto(picked, result.price, bands)} title="Opens a drafted email in your mail app. You send it.">Send offer to the listing agent</a>
+                  <span className="sub">Real email, drafted by your agent. No name, no numbers about you.</span>
                   <span className="spacer" />
                   <button type="button" className="btn primary" onClick={() => onDone({ price: result.price, loan: newLoan, listing: picked })}>Send new ranges to lenders</button>
                 </div>
