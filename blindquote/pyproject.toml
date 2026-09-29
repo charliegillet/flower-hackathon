@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "blindquote"
+name = "flower-finance"
 version = "0.1.0"
 description = "Shop every mortgage lender without becoming a lead: sealed, negotiated quotes from bank SuperNodes that only ever see attested bands."
 license = { file = "LICENSE" }
@@ -15,7 +15,7 @@ packages = ["blindquote"]
 
 [tool.flwr.app]
 publisher = "charliegillet"
-display-name = "BlindQuote"
+display-name = "Flower Finance"
 color = "emerald"
 fab-format-version = 1
 flwr-version-target = "1.39.0"

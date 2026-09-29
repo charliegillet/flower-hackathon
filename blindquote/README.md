@@ -1,4 +1,4 @@
-# BlindQuote
+# Flower Finance
 
 Shop every mortgage lender without becoming a lead. A coordinator AgentApp on the SuperLink runs a sealed-bid negotiation over `agent.grid`:
 - a **borrower** SuperNode shares only bands;

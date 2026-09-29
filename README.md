@@ -1,6 +1,6 @@
 <div align="center">
 
-# BlindQuote
+# Flower Finance
 
 **Shop every mortgage lender without becoming a lead. Your agent collects sealed, negotiated quotes from competing banks on Flower, and no bank ever sees your exact numbers.**
 
@@ -28,9 +28,9 @@ Built at the **Flower Collaborative Agent Hackathon** (Stanford, 29 Sep 2026). T
 
 Mortgage shopping is a good fit because it needs several organisations that don't trust each other:
 
-| Problem | How BlindQuote handles it |
+| Problem | How Flower Finance handles it |
 |---|---|
-| **Shopping around saves money, but turns you into a sold lead** | One extra quote saves $966–$2,086 ([Freddie Mac](https://freddiemac.gcs-web.com/news-releases/news-release-details/freddie-mac-april-2018-insight)). Congress banned mortgage "trigger leads" in the [Homebuyers Privacy Protection Act](https://www.congress.gov/bill/119th-congress/house-bill/2808). BlindQuote gets you the quotes without handing your identity to anyone. |
+| **Shopping around saves money, but turns you into a sold lead** | One extra quote saves $966–$2,086 ([Freddie Mac](https://freddiemac.gcs-web.com/news-releases/news-release-details/freddie-mac-april-2018-insight)). Congress banned mortgage "trigger leads" in the [Homebuyers Privacy Protection Act](https://www.congress.gov/bill/119th-congress/house-bill/2808). Flower Finance gets you the quotes without handing your identity to anyone. |
 | **Every party holds private data** | The borrower, the credit bureau and each bank run as their own Flower **SuperNode**. The rate sheets, floors, credit files and your answers never leave their node. |
 | **Banks need facts they can trust** | The bureau node signs your credit band (HMAC). Banks verify the signature, so a range still carries weight. |
 | **Agents can overreach** | A code guard checks every message against an allowlist. When a bank asks for exact income, the guard blocks the request and records it in the disclosure ledger. |

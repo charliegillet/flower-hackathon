@@ -1,10 +1,10 @@
 [project]
-name = "blindquote-workspace"
+name = "flower-finance-workspace"
 version = "0.1.0"
-description = "Dev workspace for BlindQuote: the AgentApp (./blindquote), simulator, UI server and tests."
+description = "Dev workspace for Flower Finance: the AgentApp (./blindquote), simulator, UI server and tests."
 requires-python = ">=3.11,<3.14"
 dependencies = [
-    "blindquote",
+    "flower-finance",
     "flwr==1.39.0",
     "openai>=2.16.0,<3.0.0",
     "fastapi>=0.115",
@@ -17,7 +17,7 @@ dependencies = [
 package = false
 
 [tool.uv.sources]
-blindquote = { path = "blindquote", editable = true }
+flower-finance = { path = "blindquote", editable = true }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
