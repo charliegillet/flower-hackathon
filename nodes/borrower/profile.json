@@ -1,0 +1,16 @@
+{
+  "name": "Alex Rivera",
+  "employer": "Stanford Health Care",
+  "annual_income": 210000,
+  "monthly_debts": 1150,
+  "assets": 262000,
+  "home_price": 850000,
+  "down_payment": 170000,
+  "taxes_insurance_monthly": 1050,
+  "property_state": "CA",
+  "occupancy": "primary",
+  "term_years": 30,
+  "horizon_years": 7,
+  "product": "30-year fixed",
+  "bureau_consent_token": "consent_7f3a9c2e41"
+}
