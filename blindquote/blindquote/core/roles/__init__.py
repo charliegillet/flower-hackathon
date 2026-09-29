@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import traceback
 from pathlib import Path
 from typing import Any
 
@@ -43,7 +44,10 @@ def handle_node_message(msg: dict[str, Any], cfg: dict[str, Any], llm: LLM) -> d
         try:
             reply = HANDLERS[role](msg, cfg, llm)
         except Exception as exc:  # noqa: BLE001 - report instead of crashing the task
-            reply = {"kind": "error", "message": f"{role} failed: {type(exc).__name__}: {exc}"[:400]}
+            # Exception text can quote private values (e.g. a malformed income), so the
+            # details stay in this node's own logs and only the error type crosses the grid.
+            traceback.print_exc()
+            reply = {"kind": "error", "message": f"{role} failed: {type(exc).__name__}"}
     else:
         reply = {"kind": "error", "message": f"node has no BlindQuote role (role={role!r})"}
     try:

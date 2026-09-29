@@ -156,3 +156,11 @@ def test_hostile_bank_cannot_crash_or_win(monkeypatch, evil):
     assert events[-1]["type"] == "bq.done"
     assert verdict["winner"] != "Rapid Lending Co."
     json.dumps(events, allow_nan=False)  # every event stays strict JSON
+
+
+def test_node_errors_do_not_leak_values(tmp_path):
+    (tmp_path / "profile.json").write_text(json.dumps({"home_price": 850000, "down_payment": 170000,
+                                                       "annual_income": "$210,000", "bureau_consent_token": "t"}))
+    reply = handle_node_message({"kind": "bands_request", "session": "s"},
+                                {"role": "borrower", "data_dir": str(tmp_path)}, NO_LLM)
+    assert reply == {"kind": "error", "message": "borrower failed: ValueError"}
