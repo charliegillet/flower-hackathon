@@ -12,12 +12,12 @@ export const BANKS = [
   { id: 'chase', name: 'Chase', short: 'Chase', domain: 'chase.com', color: '#117ACA', spread: 0.125, points: 0.5, fees: 2950, floorDelta: 0.25, persona: 'relationship bank, likes primary residences', greedy: false, prepayPenalty: false, closeDays: 32 },
   { id: 'wells', name: 'Wells Fargo', short: 'Wells', domain: 'wellsfargo.com', color: '#D71E28', spread: 0.5, points: 0.0, fees: 1800, floorDelta: 0.625, persona: 'wide branch network, slower to improve', greedy: false, prepayPenalty: false, closeDays: 28 },
   { id: 'usbank', name: 'U.S. Bank', short: 'U.S. Bank', domain: 'usbank.com', color: '#0C2074', spread: 0.0, points: 1.75, fees: 3900, floorDelta: 0.125, persona: 'low headline rate, recovers margin in points and fees; asks for more data than allowed', greedy: true, prepayPenalty: true, closeDays: 40 },
+  { id: 'navy', name: 'Navy Federal Credit Union', short: 'Navy Federal', domain: 'navyfederal.org', color: '#0F2E5C', spread: 0.25, points: 0.125, fees: 1500, floorDelta: 0.375, persona: 'member-owned credit union, low fees, moderate rate', greedy: false, prepayPenalty: false, closeDays: 25 },
   // Private lenders. No Flower node yet, so they always run in the browser simulation,
   // even when the banks run live on Flower. In the federation each becomes a SuperNode
   // like any bank; add it to deploy/topology.json with role "bank".
   { id: 'harbor', kind: 'private', name: 'Harbor Private Capital', short: 'Harbor', domain: 'harborprivatecapital.example', color: '#2F3E56', spread: 0.875, points: 1.0, fees: 4800, floorDelta: 0.75, persona: 'private lender, fast close, prices for speed not credit', greedy: false, prepayPenalty: true, closeDays: 12 },
   { id: 'bayfund', kind: 'private', name: 'Bay Area Lending Partners', short: 'BALP', domain: 'balp.example', color: '#1E4B86', spread: 0.625, points: 0.5, fees: 3600, floorDelta: 0.5, persona: 'private lender, flexible on documentation, competes on fees', greedy: false, prepayPenalty: false, closeDays: 15 },
-  { id: 'navy', name: 'Navy Federal Credit Union', short: 'Navy Federal', domain: 'navyfederal.org', color: '#0F2E5C', spread: 0.25, points: 0.125, fees: 1500, floorDelta: 0.375, persona: 'member-owned credit union, low fees, moderate rate', greedy: false, prepayPenalty: false, closeDays: 25 },
 ];
 
 export const logoUrl = (bank) => `https://www.google.com/s2/favicons?domain=${bank.domain}&sz=64`;
