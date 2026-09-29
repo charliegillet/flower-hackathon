@@ -147,10 +147,11 @@ export default function App() {
                   applicant: {
                     name: user.name,
                     email: user.email,
-                    annualIncome: Number(form.annualIncome) + Number(form.otherIncome || 0),
+                    annualIncome: Number(form.annualIncome) || 0,
                     employmentStatus: form.employmentStatus,
-                    monthlyDebt: ['monthlyHousing', 'autoLoans', 'studentLoans', 'creditCards', 'otherDebt'].reduce((s, k) => s + (Number(form[k]) || 0), 0),
-                    totalAssets: ['checking', 'savings', 'investments', 'retirement', 'realEstate'].reduce((s, k) => s + (Number(form[k]) || 0), 0),
+                    // The trust flow now asks for single totals (see SECTIONS in core/bands.js).
+                    monthlyDebt: Number(form.monthlyDebt) || 0,
+                    totalAssets: Number(form.totalAssets) || 0,
                     creditScore: Number(form.creditScore),
                   },
                   loan: { amount: Number(form.amount), purpose: form.purpose, termMonths: Number(form.termMonths) },

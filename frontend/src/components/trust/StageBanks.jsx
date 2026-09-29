@@ -25,6 +25,7 @@ export default function StageBanks({ bands, mandate = {}, principal, horizonYear
 
   useEffect(() => {
     let run = { cancel: () => {} };
+    let priv = null; // private-lender simulation running beside a live Flower run
     let cancelled = false;
     const startSimulated = () => {
       setEngine('simulated');
@@ -35,6 +36,9 @@ export default function StageBanks({ bands, mandate = {}, principal, horizonYear
         if (cancelled) return;
         setFallbackNote(e.reason === 'busy' ? 'Simulated: Flower busy' : 'Simulated: Flower prices home loans only');
         setEvents([]);
+        // The full simulation includes the private lenders; stop the side-run so they don't run twice.
+        priv?.cancel();
+        priv = null;
         startSimulated();
         return;
       }
@@ -54,8 +58,10 @@ export default function StageBanks({ bands, mandate = {}, principal, horizonYear
         setEngine('flower');
         const live = startFlowerNegotiation(bands, onEvent, { horizonYears, consentToken });
         // Private lenders have no Flower node yet: they run in the browser alongside the live banks.
-        const priv = startNegotiation(bands, BANKS.filter((b) => b.kind === 'private'), onEvent, { principal, horizonYears, mandate });
-        run = { cancel: () => { live.cancel(); priv.cancel(); } };
+        // Their simulation must not end the run or open its own round 2: the Flower coordinator owns both.
+        const onPrivate = (e) => { if (e.type !== 'done' && e.type !== 'round2') onEvent(e); };
+        priv = startNegotiation(bands, BANKS.filter((b) => b.kind === 'private'), onPrivate, { principal, horizonYears, mandate });
+        run = { cancel: () => { live.cancel(); priv?.cancel(); } };
       } else {
         startSimulated();
       }
@@ -82,8 +88,15 @@ export default function StageBanks({ bands, mandate = {}, principal, horizonYear
 
   const scoreKey = mandate.priority === 'Lowest monthly payment' ? 'monthly' : mandate.priority === 'Least cash at closing' ? 'cash' : mandate.priority === 'Fastest close' ? 'closeDays' : 'total';
   const score = (o) => (scoreKey === 'cash' ? (o.points / 100) * principal + o.fees : o[scoreKey]);
+  // Flower offers carry no closeDays/prepayPenalty: offers without the value sort last, then by total cost.
+  const byScore = (a, b) => {
+    const sa = score(a), sb = score(b);
+    const ma = sa == null || Number.isNaN(sa), mb = sb == null || Number.isNaN(sb);
+    if (ma !== mb) return ma ? 1 : -1;
+    return (ma ? 0 : sa - sb) || a.total - b.total;
+  };
   const ranking = useMemo(() => {
-    const quoted = BANKS.filter((b) => byBank[b.id].offer).sort((a, b) => score(byBank[a.id].offer) - score(byBank[b.id].offer));
+    const quoted = BANKS.filter((b) => byBank[b.id].offer).sort((a, b) => byScore(byBank[a.id].offer, byBank[b.id].offer));
     const verdict = engine === 'flower' ? events.find((e) => e.type === 'verdict') : null;
     if (!verdict?.ranking?.length) return quoted;
     const pos = (b) => { const i = verdict.ranking.indexOf(b.id); return i < 0 ? Infinity : i; };
@@ -92,7 +105,8 @@ export default function StageBanks({ bands, mandate = {}, principal, horizonYear
   const checks = (o) => [
     mandate.maxPayment ? { label: `Payment under $${mandate.maxPayment.toLocaleString()}`, ok: o.monthly <= mandate.maxPayment, val: `$${o.monthly.toLocaleString()}` } : null,
     mandate.walkAwayRate ? { label: `Rate under ${mandate.walkAwayRate}%`, ok: o.rate < mandate.walkAwayRate, val: `${o.rate.toFixed(3)}%` } : null,
-    mandate.noPrepayPenalty === 'Required' ? { label: 'No prepayment penalty', ok: !o.prepayPenalty, val: o.prepayPenalty ? 'has one' : 'none' } : null,
+    // Only check terms the offer actually states (Flower offers don't state a prepayment penalty).
+    mandate.noPrepayPenalty === 'Required' && o.prepayPenalty !== undefined ? { label: 'No prepayment penalty', ok: !o.prepayPenalty, val: o.prepayPenalty ? 'has one' : 'none' } : null,
     mandate.cashToClose ? { label: `Closing cash under $${mandate.cashToClose.toLocaleString()}`, ok: (o.points / 100) * principal + o.fees <= mandate.cashToClose, val: `$${Math.round((o.points / 100) * principal + o.fees).toLocaleString()}` } : null,
   ].filter(Boolean);
   const meetsAll = (o) => checks(o).every((c) => c.ok);
@@ -179,8 +193,8 @@ export default function StageBanks({ bands, mandate = {}, principal, horizonYear
               <div className="kpi"><span className="k">Fees</span><span className="v">${bs.offer.fees.toLocaleString()}</span></div>
               <div className="kpi"><span className="k">Monthly</span><span className="v">${bs.offer.monthly.toLocaleString()}</span></div>
               <div className="kpi strong"><span className="k">{horizonYears}-year total cost</span><span className="v">${bs.offer.total.toLocaleString()}</span></div>
-              <div className="kpi"><span className="k">Prepay penalty</span><span className="v small">{bs.offer.prepayPenalty ? 'Yes' : 'None'}</span></div>
-              <div className="kpi"><span className="k">Close in</span><span className="v small">{bs.offer.closeDays} days</span></div>
+              {bs.offer.prepayPenalty !== undefined && <div className="kpi"><span className="k">Prepay penalty</span><span className="v small">{bs.offer.prepayPenalty ? 'Yes' : 'None'}</span></div>}
+              {bs.offer.closeDays != null && <div className="kpi"><span className="k">Close in</span><span className="v small">{bs.offer.closeDays} days</span></div>}
             </div>
           )}
         </div>
