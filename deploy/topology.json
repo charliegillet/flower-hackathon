@@ -25,56 +25,88 @@
       "latlon": "33.6411,-117.9187"
     },
     {
-      "key": "bank-a",
+      "key": "chase",
       "provider": "flower",
       "node_config": {
         "role": "bank",
-        "name": "Cardinal Bank",
-        "org_kind": "Regional bank",
-        "location": "San Jose, CA",
+        "bank_id": "chase",
+        "name": "Chase",
+        "org_kind": "Relationship bank",
+        "location": "New York, NY",
         "model": "flwrlabs/endeavor-1.0",
-        "data_dir": "nodes/bank-a"
+        "data_dir": "nodes/chase"
       },
-      "latlon": "37.3382,-121.8863"
+      "latlon": "40.7128,-74.0060"
     },
     {
-      "key": "bank-b",
+      "key": "navy",
       "provider": "nebius-kimi",
       "node_config": {
         "role": "bank",
-        "name": "Golden Gate Credit Union",
+        "bank_id": "navy",
+        "name": "Navy Federal Credit Union",
         "org_kind": "Credit union",
-        "location": "San Francisco, CA",
+        "location": "Vienna, VA",
         "model": "dedicated/flowerai/Kimi-K2.7-Code-1OUHWL",
-        "data_dir": "nodes/bank-b"
+        "data_dir": "nodes/navy"
       },
-      "latlon": "37.7749,-122.4194"
+      "latlon": "38.9012,-77.2653"
     },
     {
-      "key": "bank-c",
+      "key": "citi",
       "provider": "nebius-minimax",
       "node_config": {
         "role": "bank",
-        "name": "Bay Mortgage Co.",
-        "org_kind": "Online lender",
-        "location": "Oakland, CA",
+        "bank_id": "citi",
+        "name": "Citibank",
+        "org_kind": "Global bank",
+        "location": "New York, NY",
         "model": "dedicated/flowerai/MiniMax-M3-OOLI9o",
-        "data_dir": "nodes/bank-c"
+        "data_dir": "nodes/citi"
       },
-      "latlon": "37.8044,-122.2712"
+      "latlon": "40.7209,-74.0110"
     },
     {
-      "key": "bank-d",
+      "key": "usbank",
       "provider": "nebius-kimi",
       "node_config": {
         "role": "bank",
-        "name": "Rapid Lending Co.",
-        "org_kind": "Non-bank lender",
-        "location": "Las Vegas, NV",
+        "bank_id": "usbank",
+        "name": "U.S. Bank",
+        "org_kind": "National bank",
+        "location": "Minneapolis, MN",
         "model": "dedicated/flowerai/Kimi-K2.7-Code-1OUHWL",
-        "data_dir": "nodes/bank-d"
+        "data_dir": "nodes/usbank"
       },
-      "latlon": "36.1699,-115.1398"
+      "latlon": "44.9778,-93.2650"
+    },
+    {
+      "key": "bofa",
+      "provider": "flower",
+      "node_config": {
+        "role": "bank",
+        "bank_id": "bofa",
+        "name": "Bank of America",
+        "org_kind": "National bank",
+        "location": "Charlotte, NC",
+        "model": "flwrlabs/endeavor-1.0",
+        "data_dir": "nodes/bofa"
+      },
+      "latlon": "35.2271,-80.8431"
+    },
+    {
+      "key": "wells",
+      "provider": "nebius-minimax",
+      "node_config": {
+        "role": "bank",
+        "bank_id": "wells",
+        "name": "Wells Fargo",
+        "org_kind": "National bank",
+        "location": "San Francisco, CA",
+        "model": "dedicated/flowerai/MiniMax-M3-OOLI9o",
+        "data_dir": "nodes/wells"
+      },
+      "latlon": "37.7749,-122.4194"
     }
   ]
 }

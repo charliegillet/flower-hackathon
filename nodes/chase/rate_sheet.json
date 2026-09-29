@@ -1,6 +1,6 @@
 {
-  "name": "Cardinal Bank",
-  "persona": "a regional relationship bank that competes selectively",
+  "name": "Chase",
+  "persona": "a relationship bank that likes primary residences and competes selectively",
   "par_rate": 6.83,
   "rate_per_point": 0.2,
   "margin_pts": 0.6,
@@ -13,5 +13,5 @@
     "max_ltv_band": "90.01-95%"
   },
   "strategy": "match competitors when still profitable",
-  "pitch": "Cardinal Bank: steady local servicing and a clean closing."
+  "pitch": "Chase: relationship pricing and a clean closing."
 }

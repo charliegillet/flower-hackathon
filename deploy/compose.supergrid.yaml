@@ -30,63 +30,93 @@ services:
       - ../nodes/bureau:/data:ro
       - ../secrets:/secrets:ro
     restart: unless-stopped
-  bank-a:
+  chase:
     image: flwr/supernode:1.39.0
     command:
       - --superlink=fleet-supergrid.flower.ai:443
-      - --auth-supernode-private-key=/keys/bank-a
+      - --auth-supernode-private-key=/keys/chase
       - --allow-runtime-dependency-installation
-      - --node-config=role="bank" name="Cardinal Bank" org_kind="Regional bank" location="San Jose, CA" model="flwrlabs/endeavor-1.0" data_dir="/data" hmac_key_file="/secrets/bureau.key"
+      - --node-config=role="bank" bank_id="chase" name="Chase" org_kind="Relationship bank" location="New York, NY" model="flwrlabs/endeavor-1.0" data_dir="/data" hmac_key_file="/secrets/bureau.key"
     environment:
       FLWR_MODEL_API_ENDPOINT: "https://api.flower.ai/v1/responses"
       FLWR_MODEL_API_KEY: "${FLWR_MODEL_API_KEY}"
     volumes:
-      - ../keys/bank-a:/keys/bank-a:ro
-      - ../nodes/bank-a:/data:ro
+      - ../keys/chase:/keys/chase:ro
+      - ../nodes/chase:/data:ro
       - ../secrets:/secrets:ro
     restart: unless-stopped
-  bank-b:
+  navy:
     image: flwr/supernode:1.39.0
     command:
       - --superlink=fleet-supergrid.flower.ai:443
-      - --auth-supernode-private-key=/keys/bank-b
+      - --auth-supernode-private-key=/keys/navy
       - --allow-runtime-dependency-installation
-      - --node-config=role="bank" name="Golden Gate Credit Union" org_kind="Credit union" location="San Francisco, CA" model="dedicated/flowerai/Kimi-K2.7-Code-1OUHWL" data_dir="/data" hmac_key_file="/secrets/bureau.key"
+      - --node-config=role="bank" bank_id="navy" name="Navy Federal Credit Union" org_kind="Credit union" location="Vienna, VA" model="dedicated/flowerai/Kimi-K2.7-Code-1OUHWL" data_dir="/data" hmac_key_file="/secrets/bureau.key"
     environment:
       FLWR_MODEL_API_ENDPOINT: "${NEBIUS_MODEL_API_ENDPOINT}"
       FLWR_MODEL_API_KEY: "${NEBIUS_KIMI_API_KEY}"
     volumes:
-      - ../keys/bank-b:/keys/bank-b:ro
-      - ../nodes/bank-b:/data:ro
+      - ../keys/navy:/keys/navy:ro
+      - ../nodes/navy:/data:ro
       - ../secrets:/secrets:ro
     restart: unless-stopped
-  bank-c:
+  citi:
     image: flwr/supernode:1.39.0
     command:
       - --superlink=fleet-supergrid.flower.ai:443
-      - --auth-supernode-private-key=/keys/bank-c
+      - --auth-supernode-private-key=/keys/citi
       - --allow-runtime-dependency-installation
-      - --node-config=role="bank" name="Bay Mortgage Co." org_kind="Online lender" location="Oakland, CA" model="dedicated/flowerai/MiniMax-M3-OOLI9o" data_dir="/data" hmac_key_file="/secrets/bureau.key"
+      - --node-config=role="bank" bank_id="citi" name="Citibank" org_kind="Global bank" location="New York, NY" model="dedicated/flowerai/MiniMax-M3-OOLI9o" data_dir="/data" hmac_key_file="/secrets/bureau.key"
     environment:
       FLWR_MODEL_API_ENDPOINT: "${NEBIUS_MODEL_API_ENDPOINT}"
       FLWR_MODEL_API_KEY: "${NEBIUS_MINIMAX_API_KEY}"
     volumes:
-      - ../keys/bank-c:/keys/bank-c:ro
-      - ../nodes/bank-c:/data:ro
+      - ../keys/citi:/keys/citi:ro
+      - ../nodes/citi:/data:ro
       - ../secrets:/secrets:ro
     restart: unless-stopped
-  bank-d:
+  usbank:
     image: flwr/supernode:1.39.0
     command:
       - --superlink=fleet-supergrid.flower.ai:443
-      - --auth-supernode-private-key=/keys/bank-d
+      - --auth-supernode-private-key=/keys/usbank
       - --allow-runtime-dependency-installation
-      - --node-config=role="bank" name="Rapid Lending Co." org_kind="Non-bank lender" location="Las Vegas, NV" model="dedicated/flowerai/Kimi-K2.7-Code-1OUHWL" data_dir="/data" hmac_key_file="/secrets/bureau.key"
+      - --node-config=role="bank" bank_id="usbank" name="U.S. Bank" org_kind="National bank" location="Minneapolis, MN" model="dedicated/flowerai/Kimi-K2.7-Code-1OUHWL" data_dir="/data" hmac_key_file="/secrets/bureau.key"
     environment:
       FLWR_MODEL_API_ENDPOINT: "${NEBIUS_MODEL_API_ENDPOINT}"
       FLWR_MODEL_API_KEY: "${NEBIUS_KIMI_API_KEY}"
     volumes:
-      - ../keys/bank-d:/keys/bank-d:ro
-      - ../nodes/bank-d:/data:ro
+      - ../keys/usbank:/keys/usbank:ro
+      - ../nodes/usbank:/data:ro
+      - ../secrets:/secrets:ro
+    restart: unless-stopped
+  bofa:
+    image: flwr/supernode:1.39.0
+    command:
+      - --superlink=fleet-supergrid.flower.ai:443
+      - --auth-supernode-private-key=/keys/bofa
+      - --allow-runtime-dependency-installation
+      - --node-config=role="bank" bank_id="bofa" name="Bank of America" org_kind="National bank" location="Charlotte, NC" model="flwrlabs/endeavor-1.0" data_dir="/data" hmac_key_file="/secrets/bureau.key"
+    environment:
+      FLWR_MODEL_API_ENDPOINT: "https://api.flower.ai/v1/responses"
+      FLWR_MODEL_API_KEY: "${FLWR_MODEL_API_KEY}"
+    volumes:
+      - ../keys/bofa:/keys/bofa:ro
+      - ../nodes/bofa:/data:ro
+      - ../secrets:/secrets:ro
+    restart: unless-stopped
+  wells:
+    image: flwr/supernode:1.39.0
+    command:
+      - --superlink=fleet-supergrid.flower.ai:443
+      - --auth-supernode-private-key=/keys/wells
+      - --allow-runtime-dependency-installation
+      - --node-config=role="bank" bank_id="wells" name="Wells Fargo" org_kind="National bank" location="San Francisco, CA" model="dedicated/flowerai/MiniMax-M3-OOLI9o" data_dir="/data" hmac_key_file="/secrets/bureau.key"
+    environment:
+      FLWR_MODEL_API_ENDPOINT: "${NEBIUS_MODEL_API_ENDPOINT}"
+      FLWR_MODEL_API_KEY: "${NEBIUS_MINIMAX_API_KEY}"
+    volumes:
+      - ../keys/wells:/keys/wells:ro
+      - ../nodes/wells:/data:ro
       - ../secrets:/secrets:ro
     restart: unless-stopped

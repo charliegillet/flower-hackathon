@@ -1,6 +1,6 @@
 {
-  "name": "Bay Mortgage Co.",
-  "persona": "an aggressive online lender that wants volume on larger loans",
+  "name": "Citibank",
+  "persona": "a global bank that competes hard on rate for high credit bands and larger loans",
   "par_rate": 6.73,
   "rate_per_point": 0.2,
   "margin_pts": 1.6,
@@ -18,6 +18,6 @@
     "max_dti": 50,
     "max_ltv_band": ">95%"
   },
-  "strategy": "win the deal: undercut the best competitor whenever headroom allows",
-  "pitch": "Bay Mortgage: fast digital closing, priced to win."
+  "strategy": "win the deal: open a deep ladder whenever behind",
+  "pitch": "Citi: priced to win for strong credit."
 }

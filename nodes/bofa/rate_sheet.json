@@ -1,0 +1,17 @@
+{
+  "name": "Bank of America",
+  "persona": "a large national bank, conservative, values strong assets",
+  "par_rate": 6.88,
+  "rate_per_point": 0.2,
+  "margin_pts": 0.75,
+  "floor_pts": 0.45,
+  "fees": 2400,
+  "buydown_pts": 1.0,
+  "overlays": {
+    "min_fico": 660,
+    "max_dti": 45,
+    "max_ltv_band": "90.01-95%"
+  },
+  "strategy": "improve modestly, protect margin",
+  "pitch": "Bank of America: steady pricing with national servicing."
+}

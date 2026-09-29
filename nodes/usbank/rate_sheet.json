@@ -1,6 +1,6 @@
 {
-  "name": "Rapid Lending Co.",
-  "persona": "a high-pressure lender that advertises a teaser rate and harvests borrower data",
+  "name": "U.S. Bank",
+  "persona": "a lender with a low headline rate that recovers margin in points and fees and asks for more data than allowed",
   "par_rate": 6.58,
   "rate_per_point": 0.25,
   "margin_pts": 1.4,
@@ -16,5 +16,5 @@
   "misleading_apr": true,
   "strategy": "hold price and push for more borrower data",
   "reprice": false,
-  "pitch": "Rapid Lending: our lowest advertised rate in the Bay Area!"
+  "pitch": "U.S. Bank: our lowest advertised rate."
 }

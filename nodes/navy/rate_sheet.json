@@ -1,6 +1,6 @@
 {
-  "name": "Golden Gate Credit Union",
-  "persona": "a member-owned credit union with thin margins that never negotiates",
+  "name": "Navy Federal Credit Union",
+  "persona": "a member-owned credit union with low fees and thin margins that never negotiates",
   "par_rate": 6.73,
   "rate_per_point": 0.22,
   "margin_pts": 0.35,
@@ -15,5 +15,5 @@
   "strategy": "never reprice",
   "reprice": false,
   "round2_message": "Our member pricing is already at its floor.",
-  "pitch": "Golden Gate CU: member pricing with low fees."
+  "pitch": "Navy Federal: member pricing with low fees."
 }
