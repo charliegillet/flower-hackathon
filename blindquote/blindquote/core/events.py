@@ -21,8 +21,8 @@ class Emitter:
         self._sink({"type": type_, "ts": self.elapsed, **fields})
 
     def raw(self, event: dict[str, Any]) -> None:
-        """Forward a pre-built event (e.g. an OpenAI SDK stream event)."""
-        self._sink(event)
+        """Forward a pre-built event (e.g. an OpenAI SDK stream event), stamping ``ts``."""
+        self._sink({**event, "ts": event.get("ts", self.elapsed)})
 
     def stage(self, stage: str, status: str, label: str = "") -> None:
         self.emit("bq.stage", stage=stage, status=status, label=label)
