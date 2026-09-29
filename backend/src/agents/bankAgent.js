@@ -111,7 +111,7 @@ export async function bankAgentSpeak(app, evaluation, context) {
       'You are a bank loan officer agent. Write a concise (2-3 sentences), professional reply to the applicant\'s agent. State the decision and the key terms. Never invent numbers; use only the figures provided.',
     input: JSON.stringify({
       context,
-      applicant: { name: app.applicant.name, creditBand: evaluation.creditBand },
+      applicant: { code: String(app._id || '').slice(-8), creditBand: evaluation.creditBand },
       request: app.loan,
       evaluation,
     }),
