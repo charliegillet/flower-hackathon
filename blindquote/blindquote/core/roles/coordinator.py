@@ -207,6 +207,12 @@ class Coordinator:
         def on_reply(nid: str, msg: dict[str, Any]) -> None:
             if msg.get("kind") != "attestation":
                 raise RuntimeError(f"Bureau node error: {msg.get('message', msg)}")
+            try:
+                check(msg)
+            except GuardViolation as exc:
+                ev.emit("bq.guard", bank=self.nodes[nid]["name"], node_id=nid, round=0,
+                        violation="outbound_blocked", requested=exc.fields, detail=exc.detail, action="blocked")
+                raise RuntimeError("Bureau reply blocked by guard") from exc
             out.update(msg)
 
         self._exchange([(bureau, {"kind": "attest_request", "session": self.session, "token": token})], self.t.attest, on_reply)
