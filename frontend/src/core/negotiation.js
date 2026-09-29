@@ -25,6 +25,7 @@
 
 import { MARKET_BASE_RATE } from './banks.js';
 import { ALLOWED_BAND_KEYS } from './bands.js';
+import { rand, resetSeed } from './demo.js';
 
 const bandLo = (label) => (label ? Number(String(label).replace(/[^0-9.–-]/g, '').split(/[–-]/)[0]) : null);
 
@@ -98,8 +99,11 @@ export function describeBands(bands) {
 
 export function startNegotiation(bands, banks, onEvent, opts = {}) {
   const principal = opts.principal || 500000;
+  const mandate = opts.mandate || {};
+  const ask = mandate.noPrepayPenalty === 'Required' ? 'Drop the prepayment penalty.' : mandate.priority === 'Least cash at closing' ? 'Offer a zero-points version.' : mandate.priority === 'Lowest monthly payment' ? 'Lower the rate, points are acceptable.' : 'Match the best fee total.';
   const months = bands.termMonths || 360;
   const horizon = opts.horizonYears || 7;
+  resetSeed();
   const timers = [];
   let t = 0;
   const at = (delay, ev) => { t += delay; timers.push(setTimeout(() => onEvent({ t: Math.round(t / 100) / 10, ...ev }), t)); };
@@ -109,7 +113,7 @@ export function startNegotiation(bands, banks, onEvent, opts = {}) {
   // Round 1: ranges go out to everyone at once.
   banks.forEach((b) => at(0, { type: 'sent', bankId: b.id, text: `Received applicant code ${bands.token}: ${describeBands(bands)}. No name, no exact figures.` }));
 
-  const order = [...banks].sort(() => Math.random() - 0.5);
+  const order = [...banks].sort(() => rand() - 0.5);
   order.forEach((b, i) => {
     const sheet = priceFromSheet(b, bands);
     sheets[b.id] = sheet;
@@ -120,7 +124,7 @@ export function startNegotiation(bands, banks, onEvent, opts = {}) {
       at(500, { type: 'blocked', bankId: b.id, fields: g.refused, text: `Guard refused: ${g.refused.join(', ')} are not in the allowed list. Quote on ranges or withdraw.` });
       at(900, { type: 'thinking', bankId: b.id, text: 'Quoting on ranges only. We will keep the headline rate low and recover margin in points and fees.' });
     }
-    const offer = { rate: sheet.rate, points: sheet.points, fees: sheet.fees };
+    const offer = { rate: sheet.rate, points: sheet.points, fees: sheet.fees, prepayPenalty: b.prepayPenalty, closeDays: b.closeDays };
     offer.monthly = Math.round(monthlyPayment(principal, offer.rate, months));
     offer.total = totalCost(offer, principal, months, horizon);
     offers[b.id] = offer;
@@ -130,7 +134,7 @@ export function startNegotiation(bands, banks, onEvent, opts = {}) {
   // Round 2: one number, nothing else.
   at(1500, (() => {
     const best = Math.min(...Object.values(offers).map((o) => o.total));
-    return { type: 'round2', bestTotal: best, text: `Round 2. Each bank hears one number: the best competing ${horizon}-year total cost is $${best.toLocaleString()}. Not who offered it. Nothing new about you.` };
+    return { type: 'round2', bestTotal: best, ask, text: `Round 2. Each bank hears one number, the best competing ${horizon}-year total cost of $${best.toLocaleString()}, and one ask from your agent: "${ask}" Not who offered it. Nothing new about you.` };
   })());
 
   order.forEach((b, i) => {
@@ -138,15 +142,20 @@ export function startNegotiation(bands, banks, onEvent, opts = {}) {
     const cur = offers[b.id];
     const best = Math.min(...Object.values(offers).map((o) => o.total));
     const canCut = cur.rate - 0.125 >= sheet.floor;
-    const wants = cur.total > best && canCut && !b.greedy && Math.random() > 0.3;
+    const dropPrepay = b.prepayPenalty && mandate.noPrepayPenalty === 'Required' && !b.greedy;
+    const wants = cur.total > best && canCut && !b.greedy && rand() > 0.3;
     at(500 + i * 200, { type: 'thinking', bankId: b.id, text: wants ? `We are $${(cur.total - best).toLocaleString()} above the best offer. Our floor allows one more cut.` : cur.rate - 0.125 < sheet.floor ? 'We are at our floor. Code will not let us go lower.' : 'Holding. The margin is where we want it.' });
     if (wants) {
-      const improved = { ...cur, rate: round8(Math.max(sheet.floor, cur.rate - 0.25)) };
+      const improved = { ...cur, rate: round8(Math.max(sheet.floor, cur.rate - 0.25)), prepayPenalty: dropPrepay ? false : cur.prepayPenalty };
       improved.monthly = Math.round(monthlyPayment(principal, improved.rate, months));
       improved.total = totalCost(improved, principal, months, horizon);
       const delta = cur.total - improved.total;
       offers[b.id] = improved;
-      at(500, { type: 'improve', bankId: b.id, offer: improved, delta, text: `Improved to ${improved.rate.toFixed(3)}%. That lowers your ${horizon}-year cost by $${delta.toLocaleString()}.` });
+      at(500, { type: 'improve', bankId: b.id, offer: improved, delta, text: `Improved to ${improved.rate.toFixed(3)}%${dropPrepay ? ' and dropped the prepayment penalty' : ''}. That lowers your ${horizon}-year cost by $${delta.toLocaleString()}.` });
+    } else if (dropPrepay) {
+      const partial = { ...cur, prepayPenalty: false };
+      offers[b.id] = partial;
+      at(350, { type: 'improve', bankId: b.id, offer: partial, delta: 0, text: 'We hold the rate but will drop the prepayment penalty.' });
     } else {
       at(350, { type: 'hold', bankId: b.id, text: cur.rate - 0.125 < sheet.floor ? 'We are at our floor and cannot improve.' : 'We will hold our current offer.' });
     }

@@ -4,6 +4,7 @@ import { startNegotiation, describeBands } from '../../core/negotiation.js';
 import { flowerAvailable, startFlowerNegotiation } from '../../core/flowerNegotiation.js';
 import { bandsForDisplay } from '../../core/bands.js';
 import { Lock, Arrow, Check, Block, Shield, Spinner } from './Icons.jsx';
+import Approval from './Approval.jsx';
 
 const STATUS = {
   waiting: ['idle', 'Waiting'], sent: ['work', 'Pricing'], thinking: ['work', 'Thinking'], request: ['warn', 'Asking for more'],
@@ -11,7 +12,8 @@ const STATUS = {
   flag: ['warn', 'APR flagged'], declined: ['idle', 'Declined'],
 };
 
-export default function StageBanks({ bands, principal, horizonYears, consentToken, onAccept, onOpenLedger, onLedger }) {
+export default function StageBanks({ bands, mandate = {}, principal, horizonYears, consentToken, onAccept, onOpenLedger, onLedger, onBlocked }) {
+  const [pause, setPause] = useState(null); // a bank's over-ask, shown to the user before the guard's refusal stands
   const [events, setEvents] = useState([]);
   const [selected, setSelected] = useState(BANKS[0].id);
   const [done, setDone] = useState(null);
@@ -23,16 +25,20 @@ export default function StageBanks({ bands, principal, horizonYears, consentToke
 
   useEffect(() => {
     let run = { cancel: () => {} };
+    let priv = null; // private-lender simulation running beside a live Flower run
     let cancelled = false;
     const startSimulated = () => {
       setEngine('simulated');
-      run = startNegotiation(bands, BANKS, onEvent, { principal, horizonYears });
+      run = startNegotiation(bands, BANKS, onEvent, { principal, horizonYears, mandate });
     };
     const onEvent = (e) => {
       if (e.type === 'fallback') {
         if (cancelled) return;
         setFallbackNote(e.reason === 'busy' ? 'Simulated: Flower busy' : 'Simulated: Flower prices home loans only');
         setEvents([]);
+        // The full simulation includes the private lenders; stop the side-run so they don't run twice.
+        priv?.cancel();
+        priv = null;
         startSimulated();
         return;
       }
@@ -42,19 +48,26 @@ export default function StageBanks({ bands, principal, horizonYears, consentToke
       else if (e.type === 'ledger') onLedger?.(e.parties);
       else if (e.type === 'error') setLive((l) => ({ ...l, error: e.text }));
       else if (e.type === 'done') { setDone(e); setLive((l) => ({ ...l, narrative: e.narrative || '' })); }
+      else if (e.type === 'request') setPause(e);
+      else if (e.type === 'blocked') onBlocked?.(e);
       setEvents((prev) => [...prev, e]);
     };
     flowerAvailable().then((st) => {
       if (cancelled) return;
       if (st.available) {
         setEngine('flower');
-        run = startFlowerNegotiation(bands, onEvent, { horizonYears, consentToken });
+        const live = startFlowerNegotiation(bands, onEvent, { horizonYears, consentToken });
+        // Private lenders have no Flower node yet: they run in the browser alongside the live banks.
+        // Their simulation must not end the run or open its own round 2: the Flower coordinator owns both.
+        const onPrivate = (e) => { if (e.type !== 'done' && e.type !== 'round2') onEvent(e); };
+        priv = startNegotiation(bands, BANKS.filter((b) => b.kind === 'private'), onPrivate, { principal, horizonYears, mandate });
+        run = { cancel: () => { live.cancel(); priv?.cancel(); } };
       } else {
         startSimulated();
       }
     });
     return () => { cancelled = true; run.cancel(); };
-  }, [bands, principal, horizonYears, consentToken, onLedger]);
+  }, [bands, principal, horizonYears, consentToken, onLedger, mandate]);
 
   useEffect(() => { logRef.current?.scrollTo({ top: 1e6, behavior: 'smooth' }); }, [events, selected]);
 
@@ -73,13 +86,30 @@ export default function StageBanks({ bands, principal, horizonYears, consentToke
     return m;
   }, [events]);
 
+  const scoreKey = mandate.priority === 'Lowest monthly payment' ? 'monthly' : mandate.priority === 'Least cash at closing' ? 'cash' : mandate.priority === 'Fastest close' ? 'closeDays' : 'total';
+  const score = (o) => (scoreKey === 'cash' ? (o.points / 100) * principal + o.fees : o[scoreKey]);
+  // Flower offers carry no closeDays/prepayPenalty: offers without the value sort last, then by total cost.
+  const byScore = (a, b) => {
+    const sa = score(a), sb = score(b);
+    const ma = sa == null || Number.isNaN(sa), mb = sb == null || Number.isNaN(sb);
+    if (ma !== mb) return ma ? 1 : -1;
+    return (ma ? 0 : sa - sb) || a.total - b.total;
+  };
   const ranking = useMemo(() => {
-    const quoted = BANKS.filter((b) => byBank[b.id].offer).sort((a, b) => byBank[a.id].offer.total - byBank[b.id].offer.total);
+    const quoted = BANKS.filter((b) => byBank[b.id].offer).sort((a, b) => byScore(byBank[a.id].offer, byBank[b.id].offer));
     const verdict = engine === 'flower' ? events.find((e) => e.type === 'verdict') : null;
     if (!verdict?.ranking?.length) return quoted;
     const pos = (b) => { const i = verdict.ranking.indexOf(b.id); return i < 0 ? Infinity : i; };
     return [...quoted].sort((a, b) => pos(a) - pos(b));
-  }, [byBank, events, engine]);
+  }, [byBank, events, engine, scoreKey]);
+  const checks = (o) => [
+    mandate.maxPayment ? { label: `Payment under $${mandate.maxPayment.toLocaleString()}`, ok: o.monthly <= mandate.maxPayment, val: `$${o.monthly.toLocaleString()}` } : null,
+    mandate.walkAwayRate ? { label: `Rate under ${mandate.walkAwayRate}%`, ok: o.rate < mandate.walkAwayRate, val: `${o.rate.toFixed(3)}%` } : null,
+    // Only check terms the offer actually states (Flower offers don't state a prepayment penalty).
+    mandate.noPrepayPenalty === 'Required' && o.prepayPenalty !== undefined ? { label: 'No prepayment penalty', ok: !o.prepayPenalty, val: o.prepayPenalty ? 'has one' : 'none' } : null,
+    mandate.cashToClose ? { label: `Closing cash under $${mandate.cashToClose.toLocaleString()}`, ok: (o.points / 100) * principal + o.fees <= mandate.cashToClose, val: `$${Math.round((o.points / 100) * principal + o.fees).toLocaleString()}` } : null,
+  ].filter(Boolean);
+  const meetsAll = (o) => checks(o).every((c) => c.ok);
   const leader = ranking[0];
   const round2 = events.find((e) => e.type === 'round2');
   const bank = BANKS.find((b) => b.id === selected);
@@ -89,18 +119,27 @@ export default function StageBanks({ bands, principal, horizonYears, consentToke
 
   return (
     <div className="stage stage-banks">
+      {pause && (() => { const pb = BANKS.find((b) => b.id === pause.bankId); return (
+        <Approval amber kicker="A lender asked for more" title={`${pb?.name || 'A lender'} wants your exact figures`} releases={(pause.fields || []).map((f) => `${f} (exact value)`)} keeps={['The guard refuses this by default. Nothing is sent unless you choose otherwise.']} backLabel="Refuse" approveLabel="Share as a range instead" autoSeconds={5} onBack={() => setPause(null)} onApprove={() => setPause(null)}>
+          <p className="sub">"{pause.text}"</p>
+        </Approval>
+      ); })()}
       <aside className="bank-tabs">
         <div className="stage-head">
-          <h2>Banks</h2>
-          <p className="sub">Each bank got the same sealed envelope. Click one to watch its agent.</p>
+          <h2>Lenders</h2>
+          <p className="sub">Six banks and two private lenders got the same sealed envelope. Click one to watch its agent.</p>
           <EngineBadge engine={engine} live={live} note={fallbackNote} />
         </div>
-        {BANKS.map((b) => {
+        {BANKS.map((b, idx) => {
           const s = byBank[b.id];
+          const firstPrivate = b.kind === 'private' && BANKS.findIndex((x) => x.kind === 'private') === idx;
           const [cls, label] = STATUS[s.status] || STATUS.waiting;
           const isLeader = leader?.id === b.id && done;
           return (
-            <button type="button" key={b.id} className={`bank-tab ${selected === b.id ? 'selected' : ''} ${s.blocked ? 'flag' : ''}`} onClick={() => setSelected(b.id)}>
+            <div key={b.id} style={{ display: 'contents' }}>
+            {firstPrivate && <div className="kicker" style={{ padding: '12px 22px 2px' }}>Private lenders</div>}
+            {idx === 0 && <div className="kicker" style={{ padding: '6px 22px 2px' }}>Banks</div>}
+            <button type="button" className={`bank-tab ${selected === b.id ? 'selected' : ''} ${s.blocked ? 'flag' : ''}`} onClick={() => setSelected(b.id)}>
               <Logo bank={b} />
               <span className="txt">
                 <span className="name">{b.name}{isLeader && <span className="tag done" style={{ marginLeft: 6 }}>Best</span>}</span>
@@ -108,6 +147,7 @@ export default function StageBanks({ bands, principal, horizonYears, consentToke
               </span>
               <span className={`tag ${cls}`}>{s.status === 'thinking' || s.status === 'sent' ? <Spinner width={11} height={11} /> : null}{label}</span>
             </button>
+            </div>
           );
         })}
         <div className="footnote"><Lock width={12} height={12} /> No bank can see another bank's tab. You can see all of them.</div>
@@ -153,6 +193,8 @@ export default function StageBanks({ bands, principal, horizonYears, consentToke
               <div className="kpi"><span className="k">Fees</span><span className="v">${bs.offer.fees.toLocaleString()}</span></div>
               <div className="kpi"><span className="k">Monthly</span><span className="v">${bs.offer.monthly.toLocaleString()}</span></div>
               <div className="kpi strong"><span className="k">{horizonYears}-year total cost</span><span className="v">${bs.offer.total.toLocaleString()}</span></div>
+              {bs.offer.prepayPenalty !== undefined && <div className="kpi"><span className="k">Prepay penalty</span><span className="v small">{bs.offer.prepayPenalty ? 'Yes' : 'None'}</span></div>}
+              {bs.offer.closeDays != null && <div className="kpi"><span className="k">Close in</span><span className="v small">{bs.offer.closeDays} days</span></div>}
             </div>
           )}
         </div>
@@ -160,7 +202,7 @@ export default function StageBanks({ bands, principal, horizonYears, consentToke
         <div className="rankbar">
           <div className="rank-h">
             <b>{done ? 'Final ranking' : 'Live ranking'}</b>
-            <span className="sub">by total cost over the {horizonYears} years you said you'd keep the loan</span>
+            <span className="sub">by {mandate.priority ? mandate.priority.toLowerCase() : 'total cost'}{scoreKey === 'total' ? ` over the ${horizonYears} years you'll keep the loan` : ''}</span>
             <span className="spacer" />
             <span className="tag shared"><Arrow width={11} height={11} />{rows.length} ranges shared</span>
             <span className="tag warn"><Block width={11} height={11} />{blockedTotal} request{blockedTotal === 1 ? '' : 's'} blocked</span>
@@ -178,17 +220,29 @@ export default function StageBanks({ bands, principal, horizonYears, consentToke
                   <span className="m">{o.rate.toFixed(3)}%</span>
                   <span className="m">{o.points} pts</span>
                   <span className="m strong">${o.total.toLocaleString()}</span>
-                  <span className="note">{flag ? 'Low rate, high fees. Asked for data it may not see.' : i === 0 ? 'Cheapest over your horizon' : `+$${(o.total - byBank[ranking[0].id].offer.total).toLocaleString()} vs. best`}</span>
+                  <span className="note">{flag ? 'Low rate, high fees. Asked for data it may not see.' : meetsAll(o) ? (i === 0 ? 'Best, and meets everything you asked for' : `Meets everything · +$${(o.total - byBank[ranking[0].id].offer.total).toLocaleString()} vs. best`) : `Misses: ${checks(o).filter((c) => !c.ok).map((c) => c.label.toLowerCase()).join(', ')}`}</span>
                   {i === 0 && done && <span className="accept" onClick={(ev) => { ev.stopPropagation(); onAccept(b, o); }} role="button" tabIndex={0} onKeyDown={(ev) => ev.key === 'Enter' && onAccept(b, o)}>Accept offer</span>}
                 </button>
               );
             })}
           </div>
+          {done && leader && (
+            <div className="report">
+              <div className="report-h"><b>Did you get what you asked for?</b><span className="sub">Checked against the private half of your mandate. Banks never saw these numbers.</span></div>
+              <div className="report-rows">
+                {checks(byBank[leader.id].offer).map((c) => (
+                  <div className={`report-row ${c.ok ? 'ok' : 'miss'}`} key={c.label}>{c.ok ? <Check width={12} height={12} /> : <Block width={12} height={12} />}<span>{c.label}</span><span className="m">{c.val}</span></div>
+                ))}
+                {checks(byBank[leader.id].offer).length === 0 && <div className="sub">You set no hard lines, so the ranking is by {mandate.priority?.toLowerCase() || 'total cost'} alone.</div>}
+              </div>
+              {(() => { const alt = ranking.find((b) => b.id !== leader.id && meetsAll(byBank[b.id].offer)); return !meetsAll(byBank[leader.id].offer) && alt ? <p className="sub report-alt">{alt.name} costs ${(byBank[alt.id].offer.total - byBank[leader.id].offer.total).toLocaleString()} more but meets every condition. Your call.</p> : null; })()}
+            </div>
+          )}
           {live.narrative && <div className="narrative"><b>Coordinator's explanation</b><p>{live.narrative}</p></div>}
           <div className="rank-f">
             <span className="sub">{live.error ? `Run failed: ${live.error}` : done ? 'Run complete.' : engine === 'flower'
               ? 'Negotiation in progress on Flower. In round 2 banks hear only their rank and % gap; your horizon stays private.'
-              : 'Negotiation in progress. Banks hear one number in round 2: the best competing total cost.'}</span>
+              : 'Negotiation in progress. In round 2 banks hear the best competing cost and one ask from your agent.'}</span>
             <span className="spacer" />
             <button type="button" className="btn ghost small" onClick={onOpenLedger}>Open disclosure ledger</button>
           </div>
