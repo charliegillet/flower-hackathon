@@ -514,6 +514,8 @@ function reduce(evt) {
       break;
 
     case "bq.node": {
+      // The coordinator is the fixed hub, not a node on the ring.
+      if (evt.role === "coordinator") { light("coordinator"); break; }
       state.nodes.set(evt.node_id, {
         node_id: evt.node_id, role: evt.role, name: evt.name, org_kind: evt.org_kind, model: evt.model ?? null, location: evt.location ?? null,
       });
