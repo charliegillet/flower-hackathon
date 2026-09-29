@@ -82,7 +82,7 @@ export default function StageAnswers({ form, setForm, onSeal, onFillSample }) {
     <div className="stage split">
       <div className="split-l">
         <div className="split-h">
-          <h2>Seven answers. That's it.</h2>
+          <h2>{form.fullName ? `Hi ${String(form.fullName).split(' ')[0]}, seven answers and we're off.` : 'Seven answers. That\'s it.'}</h2>
           <p className="sub">Most become a range. Your name and email never leave this device.</p>
         </div>
 

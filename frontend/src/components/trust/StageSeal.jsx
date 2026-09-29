@@ -76,7 +76,7 @@ export default function StageSeal({ form, onApprove, onBack, autoplay = true }) 
           <div className="card-h row">
             <span className="ic blue"><Device width={18} height={18} /></span>
             <div>
-              <h2>Your agent is sealing your data</h2>
+              <h2>{form.fullName ? `Sealing ${String(form.fullName).split(' ')[0]}'s data on this device` : 'Your agent is sealing your data'}</h2>
               <p className="sub">Runs on your device. Each line below is a real step, in order.</p>
             </div>
             {!sealed && <span className="tag work"><Spinner width={12} height={12} />Working</span>}

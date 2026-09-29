@@ -50,7 +50,7 @@ export default function StageHome({ form, bands, onDone, onSkip }) {
     <div className="stage home">
       <div className="home-l">
         <div className="split-h">
-          <h2>Your home agent found {listings.length} homes</h2>
+          <h2>{form.fullName ? `${String(form.fullName).split(' ')[0]}, your agent found ${listings.length} homes` : `Your home agent found ${listings.length} homes`}</h2>
           <p className="sub">Searched on your ranges only: price band and cash, not your name or income. Pick one and your agent negotiates the price with the seller's agent.</p>
         </div>
         <div className="listings">
