@@ -1,0 +1,171 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { BANKS, logoUrl } from '../../core/banks.js';
+import { startNegotiation, describeBands } from '../../core/negotiation.js';
+import { bandsForDisplay } from '../../core/bands.js';
+import { Lock, Arrow, Check, Block, Shield, Spinner } from './Icons.jsx';
+
+const STATUS = {
+  waiting: ['idle', 'Waiting'], sent: ['work', 'Pricing'], thinking: ['work', 'Thinking'], request: ['warn', 'Asking for more'],
+  blocked: ['warn', 'Blocked'], quote: ['done', 'Quoted'], improve: ['done', 'Improved'], hold: ['idle', 'Held'],
+};
+
+export default function StageBanks({ bands, principal, horizonYears, onAccept, onOpenLedger }) {
+  const [events, setEvents] = useState([]);
+  const [selected, setSelected] = useState(BANKS[0].id);
+  const [done, setDone] = useState(null);
+  const logRef = useRef(null);
+
+  useEffect(() => {
+    const run = startNegotiation(bands, BANKS, (e) => {
+      setEvents((prev) => [...prev, e]);
+      if (e.type === 'done') setDone(e);
+    }, { principal, horizonYears });
+    return run.cancel;
+  }, [bands, principal, horizonYears]);
+
+  useEffect(() => { logRef.current?.scrollTo({ top: 1e6, behavior: 'smooth' }); }, [events, selected]);
+
+  const byBank = useMemo(() => {
+    const m = Object.fromEntries(BANKS.map((b) => [b.id, { status: 'waiting', offer: null, blocked: 0, events: [], last: null }]));
+    for (const e of events) {
+      if (!e.bankId) continue;
+      const s = m[e.bankId];
+      s.events.push(e);
+      s.last = e.t;
+      if (e.type !== 'thinking' || s.status === 'sent' || s.status === 'waiting') s.status = e.type === 'thinking' ? 'thinking' : e.type;
+      if (e.type === 'thinking' && (s.status === 'quote' || s.status === 'improve' || s.status === 'hold')) s.status = 'thinking';
+      if (e.offer) s.offer = e.offer;
+      if (e.type === 'blocked') s.blocked++;
+    }
+    return m;
+  }, [events]);
+
+  const ranking = useMemo(() => BANKS.filter((b) => byBank[b.id].offer).sort((a, b) => byBank[a.id].offer.total - byBank[b.id].offer.total), [byBank]);
+  const leader = ranking[0];
+  const round2 = events.find((e) => e.type === 'round2');
+  const bank = BANKS.find((b) => b.id === selected);
+  const bs = byBank[selected];
+  const blockedTotal = events.filter((e) => e.type === 'blocked').length;
+  const rows = bandsForDisplay(bands);
+
+  return (
+    <div className="stage stage-banks">
+      <aside className="bank-tabs">
+        <div className="stage-head">
+          <h2>Banks</h2>
+          <p className="sub">Each bank got the same sealed envelope. Click one to watch its agent.</p>
+        </div>
+        {BANKS.map((b) => {
+          const s = byBank[b.id];
+          const [cls, label] = STATUS[s.status] || STATUS.waiting;
+          const isLeader = leader?.id === b.id && done;
+          return (
+            <button type="button" key={b.id} className={`bank-tab ${selected === b.id ? 'selected' : ''} ${s.blocked ? 'flag' : ''}`} onClick={() => setSelected(b.id)}>
+              <Logo bank={b} />
+              <span className="txt">
+                <span className="name">{b.name}{isLeader && <span className="tag done" style={{ marginLeft: 6 }}>Best</span>}</span>
+                <span className="st">{s.offer ? `${s.offer.rate.toFixed(3)}% · $${s.offer.total.toLocaleString()} over ${horizonYears} yrs` : s.status === 'waiting' ? 'Waiting for the envelope' : 'Reading the ranges…'}</span>
+              </span>
+              <span className={`tag ${cls}`}>{s.status === 'thinking' || s.status === 'sent' ? <Spinner width={11} height={11} /> : null}{label}</span>
+            </button>
+          );
+        })}
+        <div className="footnote"><Lock width={12} height={12} /> No bank can see another bank's tab. You can see all of them.</div>
+      </aside>
+
+      <section className="bank-main">
+        <div className="card bank-detail">
+          <div className="card-h row">
+            <Logo bank={bank} size={40} />
+            <div>
+              <h2>{bank.name}</h2>
+              <p className="sub">{bank.persona}. {bs.last != null ? `Last message ${bs.last}s in.` : ''}</p>
+            </div>
+            <span className="spacer" />
+            <span className={`tag ${(STATUS[bs.status] || STATUS.waiting)[0]}`}>{(STATUS[bs.status] || STATUS.waiting)[1]}</span>
+          </div>
+
+          <div className="knows">
+            <div className="knows-h"><Shield width={14} height={14} /><b>What {bank.short} knows about you</b><span className="sub">and nothing else</span></div>
+            <div className="chips">
+              {rows.map((r) => <span className="chip blue" key={r.key}>{r.label}: {r.value}</span>)}
+              {round2 && <span className="chip blue">Best competing cost: ${round2.bestTotal.toLocaleString()}</span>}
+            </div>
+            <div className="chips">
+              {['Your name', 'Exact income', 'Exact assets', 'Exact credit score', 'SSN', 'Employer', 'Address', 'Other banks\' offers'].map((x) => <span className="chip slate" key={x}><Lock width={10} height={10} />{x}</span>)}
+            </div>
+          </div>
+
+          <div className="transcript" ref={logRef}>
+            {bs.events.length === 0 && <div className="sub">Waiting for the coordinator to deliver the envelope…</div>}
+            {bs.events.map((e, i) => <Msg key={i} e={e} bank={bank} />)}
+            {round2 && bs.events.some((e) => e.type === 'quote') && !bs.events.some((e) => e.t >= round2.t && e.type !== 'quote') && (
+              <div className="msg coord"><span className="who">Coordinator → {bank.short}</span>{round2.text}</div>
+            )}
+          </div>
+
+          {bs.offer && (
+            <div className="offer">
+              <div className="kpi"><span className="k">Rate</span><span className="v">{bs.offer.rate.toFixed(3)}%</span></div>
+              <div className="kpi"><span className="k">Points</span><span className="v">{bs.offer.points}</span></div>
+              <div className="kpi"><span className="k">Fees</span><span className="v">${bs.offer.fees.toLocaleString()}</span></div>
+              <div className="kpi"><span className="k">Monthly</span><span className="v">${bs.offer.monthly.toLocaleString()}</span></div>
+              <div className="kpi strong"><span className="k">{horizonYears}-year total cost</span><span className="v">${bs.offer.total.toLocaleString()}</span></div>
+            </div>
+          )}
+        </div>
+
+        <div className="rankbar">
+          <div className="rank-h">
+            <b>{done ? 'Final ranking' : 'Live ranking'}</b>
+            <span className="sub">by total cost over the {horizonYears} years you said you'd keep the loan</span>
+            <span className="spacer" />
+            <span className="tag shared"><Arrow width={11} height={11} />{rows.length} ranges shared</span>
+            <span className="tag warn"><Block width={11} height={11} />{blockedTotal} request{blockedTotal === 1 ? '' : 's'} blocked</span>
+          </div>
+          <div className="rank-rows">
+            {ranking.length === 0 && <div className="sub">Quotes appear here as they arrive.</div>}
+            {ranking.map((b, i) => {
+              const o = byBank[b.id].offer;
+              const flag = byBank[b.id].blocked > 0;
+              return (
+                <button type="button" key={b.id} className={`rank-row ${i === 0 ? 'lead' : ''} ${flag ? 'flag' : ''}`} onClick={() => setSelected(b.id)}>
+                  <span className="n">{i + 1}</span>
+                  <Logo bank={b} size={22} />
+                  <span className="name">{b.name}</span>
+                  <span className="m">{o.rate.toFixed(3)}%</span>
+                  <span className="m">{o.points} pts</span>
+                  <span className="m strong">${o.total.toLocaleString()}</span>
+                  <span className="note">{flag ? 'Low rate, high fees. Asked for data it may not see.' : i === 0 ? 'Cheapest over your horizon' : `+$${(o.total - byBank[ranking[0].id].offer.total).toLocaleString()} vs. best`}</span>
+                  {i === 0 && done && <span className="accept" onClick={(ev) => { ev.stopPropagation(); onAccept(b, o); }} role="button" tabIndex={0} onKeyDown={(ev) => ev.key === 'Enter' && onAccept(b, o)}>Accept offer</span>}
+                </button>
+              );
+            })}
+          </div>
+          <div className="rank-f">
+            <span className="sub">{done ? 'Run complete.' : 'Negotiation in progress. Banks hear one number in round 2: the best competing total cost.'}</span>
+            <span className="spacer" />
+            <button type="button" className="btn ghost small" onClick={onOpenLedger}>Open disclosure ledger</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function Logo({ bank, size = 32 }) {
+  const [broken, setBroken] = useState(false);
+  if (broken) return <span className="logo mono" style={{ width: size, height: size, background: bank.color }}>{bank.short[0]}</span>;
+  return <img className="logo" src={logoUrl(bank)} alt="" width={size} height={size} onError={() => setBroken(true)} />;
+}
+
+function Msg({ e, bank }) {
+  if (e.type === 'sent') return <div className="msg coord"><span className="who">Coordinator → {bank.short}</span>{e.text}</div>;
+  if (e.type === 'thinking') return <div className="msg think"><span className="who">{bank.short} agent, reasoning</span>{e.text}</div>;
+  if (e.type === 'request') return <div className="msg request"><span className="who">{bank.short} → Coordinator</span>{e.text}<div className="chips">{e.fields.map((f) => <span className="chip amber" key={f}>{f}</span>)}</div></div>;
+  if (e.type === 'blocked') return <div className="msg blocked"><span className="who"><Block width={11} height={11} /> Guard → {bank.short}</span>{e.text}</div>;
+  if (e.type === 'quote') return <div className="msg out"><span className="who">{bank.short} → Coordinator <span className="tag sealed"><Lock width={10} height={10} />Sealed</span></span>{e.text}</div>;
+  if (e.type === 'improve') return <div className="msg out"><span className="who">{bank.short} → Coordinator <span className="tag done"><Check width={10} height={10} />Improved</span></span>{e.text}</div>;
+  if (e.type === 'hold') return <div className="msg out"><span className="who">{bank.short} → Coordinator</span>{e.text}</div>;
+  return null;
+}
