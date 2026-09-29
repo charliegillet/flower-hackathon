@@ -54,7 +54,9 @@ export default function StageBanks({ bands, mandate = {}, principal, horizonYear
         setEngine('flower');
         const live = startFlowerNegotiation(bands, onEvent, { horizonYears, consentToken });
         // Private lenders have no Flower node yet: they run in the browser alongside the live banks.
-        const priv = startNegotiation(bands, BANKS.filter((b) => b.kind === 'private'), onEvent, { principal, horizonYears, mandate });
+        // Their simulation must not end the run or open its own round 2: the Flower coordinator owns both.
+        const onPrivate = (e) => { if (e.type !== 'done' && e.type !== 'round2') onEvent(e); };
+        const priv = startNegotiation(bands, BANKS.filter((b) => b.kind === 'private'), onPrivate, { principal, horizonYears, mandate });
         run = { cancel: () => { live.cancel(); priv.cancel(); } };
       } else {
         startSimulated();
