@@ -34,6 +34,15 @@ APP_DIR = ROOT / "blindquote"
 load_dotenv(ROOT / ".env")
 
 app = FastAPI(title="BlindQuote")
+
+
+@app.middleware("http")
+async def no_cache(request, call_next):
+    """Always serve fresh UI assets (edits show up on reload during the demo)."""
+    response = await call_next(request)
+    if not request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
 _runs: dict[str, queue.Queue] = {}
 FORWARD_PREFIXES = ("bq.", "response.output_text.delta", "response.completed")
 
