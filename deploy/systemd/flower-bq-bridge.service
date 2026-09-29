@@ -10,6 +10,13 @@ Type=simple
 WorkingDirectory=/srv/flower-finance
 Environment=BQ_MODE=local
 ExecStart=/srv/flower-finance/.venv/bin/uvicorn ui.server:app --host 127.0.0.1 --port 8765
+# Runs unprivileged: create the user first (sudo useradd --system --create-home --shell /usr/sbin/nologin flower)
+# and chown the repo to it, or change User/Group below. It writes <repo>/.flwr-local and ~/.flwr.
+User=flower
+Group=flower
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
 Restart=on-failure
 RestartSec=5
 
