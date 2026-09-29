@@ -418,3 +418,24 @@ label.check input { width: 16px; height: 16px; }
 .kpi .n { font-size: 11px; color: var(--muted); }
 .kpis { display: grid; gap: 10px; }
 @media (max-width: 1100px) { .home { grid-template-columns: 1fr; } }
+
+/* ---------- Gates: approval cards + release strip ---------- */
+.strip { display: flex; gap: 14px; align-items: center; font-size: 12px; padding: 4px 0; }
+.strip-i { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); }
+.strip-i b { font-family: var(--mono); font-weight: 500; color: var(--ink); }
+.strip-i.blue { color: var(--blue); } .strip-i.blue b { color: var(--blue); }
+.strip-i.slate { color: var(--slate); }
+.strip-i.amber { color: var(--amber); } .strip-i.amber b { color: var(--amber); }
+.approval { background: var(--panel); border-radius: 16px; width: 640px; max-width: 100%; padding: 22px 24px 18px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 30px 60px -20px rgba(11,13,18,.3); animation: pop .2s ease-out; }
+.approval.amber { border-top: 4px solid var(--amber-fill); }
+.approval h2 { font-size: 26px; }
+.approval-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 6px; }
+.approval-col { border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.approval-col.rel { background: var(--blue-tint); color: var(--ink); }
+.approval-col.keep { background: var(--slate-soft); color: var(--slate); }
+.approval-col .lbl { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 4px; }
+.approval-col.rel .lbl { color: var(--blue); }
+.approval-col .row { padding: 3px 0; border-bottom: 1px solid rgba(11,13,18,.05); }
+.approval-col .row.muted { color: var(--muted); }
+.approval-foot { display: flex; align-items: center; gap: 10px; padding-top: 12px; }
+.approval-foot .btn { display: inline-flex; align-items: center; gap: 6px; }

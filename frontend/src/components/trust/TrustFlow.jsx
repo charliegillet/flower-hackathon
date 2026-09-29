@@ -3,6 +3,9 @@ import StageAnswers from './StageAnswers.jsx';
 import StageSeal from './StageSeal.jsx';
 import StageBanks from './StageBanks.jsx';
 import StageHome from './StageHome.jsx';
+import Approval from './Approval.jsx';
+import ReleaseStrip from './ReleaseStrip.jsx';
+import { ALL_FIELDS, bandsForDisplay } from '../../core/bands.js';
 import { computeBands } from '../../core/bands.js';
 import { EMPTY_FORM, SAMPLE_FORM, mandateOf } from '../../core/bands.js';
 import { Check, Lock } from './Icons.jsx';
@@ -48,6 +51,12 @@ export default function TrustFlow({ user, onAccepted, onError }) {
   const stages = STAGES.filter((s) => !s.homeOnly || form.purpose === 'home').map((s, i) => ({ ...s, n: i + 1 }));
   const reached = stages.findIndex((s) => s.key === stage);
   const [deal, setDeal] = useState(null);
+  // Gates: nothing crosses until the user approves. `gate` is the card being shown.
+  const [gate, setGate] = useState(null); // 'seal' | 'send' | 'ranges' | { accept }
+  const [counts, setCounts] = useState({ shared: 0, locked: 0, blocked: 0 });
+  const lockedCount = ALL_FIELDS.filter((f) => f.policy === 'never' && form[f.name] !== '' && form[f.name] != null).length;
+  const rangeRows = bands ? bandsForDisplay(bands).map((r) => `${r.label}: ${r.value}`) : [];
+  const KEEPS = ['Your name and email', 'Exact income, debt and assets', 'Exact credit score', 'SSN', 'Payment cap and walk-away rate', 'Your documents'];
 
   const principal = Number(form.amount) || 0;
   const horizonYears = Number(form.horizonYears) || 7;
@@ -65,34 +74,52 @@ export default function TrustFlow({ user, onAccepted, onError }) {
           );
         })}
         <span className="spacer" />
-        <span className="strip-note"><Lock width={12} height={12} /> Raw data has never left this device</span>
+        <ReleaseStrip shared={counts.shared} locked={counts.locked} blocked={counts.blocked} />
       </div>
 
       {stage === 'answers' && (
-        <StageAnswers form={form} setForm={editForm} onSeal={() => setStage('seal')} onFillSample={() => setForm(SAMPLE_FORM)} />
+        <StageAnswers form={form} setForm={editForm} onSeal={() => setGate('seal')} onFillSample={() => setForm(SAMPLE_FORM)} />
       )}
       {stage === 'seal' && (
-        <StageSeal form={form} onBack={() => setStage('answers')} onApprove={(b) => { setBands(b); setStage(form.purpose === 'home' ? 'home' : 'banks'); }} />
+        <StageSeal form={form} onBack={() => setStage('answers')} onApprove={(b) => { setBands(b); setGate('send'); }} />
       )}
       {stage === 'home' && bands && (
         <StageHome
           form={form}
           bands={bands}
           onSkip={() => setStage('banks')}
-          onDone={(d) => {
-            // The home agent's result feeds the lenders: same token, new price and loan, new ranges.
-            const next = { ...form, propertyPrice: d.price, amount: d.loan };
-            setForm(next);
-            setDeal(d);
-            setBands(computeBands({ ...next, _token: bands.token }));
-            setStage('banks');
-          }}
+          onDone={(d) => { setDeal(d); setGate('ranges'); }}
         />
       )}
       {stage === 'banks' && bands && (
-        <StageBanks bands={bands} mandate={mandateOf(form)} principal={principal} horizonYears={horizonYears} consentToken={form._consentToken || null} onLedger={onLedger} onOpenLedger={() => setLedgerOpen(true)} onAccept={(bank, offer) => onAccepted?.({ form, bands, bank, offer })} />
+        <StageBanks bands={bands} mandate={mandateOf(form)} principal={principal} horizonYears={horizonYears} consentToken={form._consentToken || null} onLedger={onLedger} onOpenLedger={() => setLedgerOpen(true)} onBlocked={() => setCounts((c) => ({ ...c, blocked: c.blocked + 1 }))} onAccept={(bank, offer) => setGate({ accept: { bank, offer } })} />
       )}
 
+      {gate === 'seal' && (
+        <Approval kicker="Gate 1 of 4" title="Seal your answers on this device" releases={[]} keeps={['Everything. Sealing runs here; nothing is sent yet.']} approveLabel="Seal" onBack={() => setGate(null)} onApprove={() => { setGate(null); setCounts((c) => ({ ...c, locked: lockedCount })); setStage('seal'); }}>
+          <p className="sub">Your exact values get locked and turned into ranges. You'll see the envelope before anything goes out.</p>
+        </Approval>
+      )}
+      {gate === 'send' && bands && (
+        <Approval kicker="Gate 2 of 4" title="Send the sealed envelope" releases={[...rangeRows, 'A one-time code to the credit bureau']} keeps={KEEPS} approveLabel="Approve and send" onBack={() => setGate(null)} onApprove={() => { setGate(null); setCounts((c) => ({ ...c, shared: rangeRows.length })); setStage(form.purpose === 'home' ? 'home' : 'banks'); }}>
+          <p className="sub">This is the first thing that crosses. The coordinator and every lender get exactly this, and nothing else.</p>
+        </Approval>
+      )}
+      {gate === 'ranges' && deal && bands && (() => {
+        const next = { ...form, propertyPrice: deal.price, amount: deal.loan };
+        const nb = computeBands({ ...next, _token: bands.token });
+        const rows = bandsForDisplay(nb).map((r) => `${r.label}: ${r.value}`);
+        return (
+          <Approval kicker="Gate 3 of 4" title="Send the new ranges to the lenders" releases={rows} keeps={['The address', 'The agreed price itself', ...KEEPS]} approveLabel="Send to lenders" onBack={() => setGate(null)} onApprove={() => { setGate(null); setForm(next); setBands(nb); setCounts((c) => ({ ...c, shared: rows.length })); setStage('banks'); }}>
+            <p className="sub">The home agent's result becomes the lenders' input. Loan vs. value: {bands.ltvBand} → {nb.ltvBand}.</p>
+          </Approval>
+        );
+      })()}
+      {gate?.accept && (
+        <Approval kicker="Gate 4 of 4" title={`Accept ${gate.accept.bank.name} at ${gate.accept.offer.rate.toFixed(3)}%`} releases={[`Your name and contact details, to ${gate.accept.bank.name} only`, 'Your full application, to start the paperwork']} keeps={['Anything to the other seven lenders', 'Your documents, until you send them to this lender']} approveLabel="Accept and release" onBack={() => setGate(null)} onApprove={() => { const g = gate.accept; setGate(null); onAccepted?.({ form, bands, bank: g.bank, offer: g.offer }); }}>
+          <p className="sub">This is the only moment your identity leaves, and it goes to one lender.</p>
+        </Approval>
+      )}
       {ledgerOpen && (
         <div className="scrim" onClick={() => setLedgerOpen(false)}>
           <div className="ledger" onClick={(e) => e.stopPropagation()}>

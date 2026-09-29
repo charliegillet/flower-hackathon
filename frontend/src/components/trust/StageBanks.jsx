@@ -4,6 +4,7 @@ import { startNegotiation, describeBands } from '../../core/negotiation.js';
 import { flowerAvailable, startFlowerNegotiation } from '../../core/flowerNegotiation.js';
 import { bandsForDisplay } from '../../core/bands.js';
 import { Lock, Arrow, Check, Block, Shield, Spinner } from './Icons.jsx';
+import Approval from './Approval.jsx';
 
 const STATUS = {
   waiting: ['idle', 'Waiting'], sent: ['work', 'Pricing'], thinking: ['work', 'Thinking'], request: ['warn', 'Asking for more'],
@@ -11,7 +12,8 @@ const STATUS = {
   flag: ['warn', 'APR flagged'], declined: ['idle', 'Declined'],
 };
 
-export default function StageBanks({ bands, mandate = {}, principal, horizonYears, consentToken, onAccept, onOpenLedger, onLedger }) {
+export default function StageBanks({ bands, mandate = {}, principal, horizonYears, consentToken, onAccept, onOpenLedger, onLedger, onBlocked }) {
+  const [pause, setPause] = useState(null); // a bank's over-ask, shown to the user before the guard's refusal stands
   const [events, setEvents] = useState([]);
   const [selected, setSelected] = useState(BANKS[0].id);
   const [done, setDone] = useState(null);
@@ -42,6 +44,8 @@ export default function StageBanks({ bands, mandate = {}, principal, horizonYear
       else if (e.type === 'ledger') onLedger?.(e.parties);
       else if (e.type === 'error') setLive((l) => ({ ...l, error: e.text }));
       else if (e.type === 'done') { setDone(e); setLive((l) => ({ ...l, narrative: e.narrative || '' })); }
+      else if (e.type === 'request') setPause(e);
+      else if (e.type === 'blocked') onBlocked?.(e);
       setEvents((prev) => [...prev, e]);
     };
     flowerAvailable().then((st) => {
@@ -101,6 +105,11 @@ export default function StageBanks({ bands, mandate = {}, principal, horizonYear
 
   return (
     <div className="stage stage-banks">
+      {pause && (() => { const pb = BANKS.find((b) => b.id === pause.bankId); return (
+        <Approval amber kicker="A lender asked for more" title={`${pb?.name || 'A lender'} wants your exact figures`} releases={(pause.fields || []).map((f) => `${f} (exact value)`)} keeps={['The guard refuses this by default. Nothing is sent unless you choose otherwise.']} backLabel="Refuse" approveLabel="Share as a range instead" autoSeconds={5} onBack={() => setPause(null)} onApprove={() => setPause(null)}>
+          <p className="sub">"{pause.text}"</p>
+        </Approval>
+      ); })()}
       <aside className="bank-tabs">
         <div className="stage-head">
           <h2>Lenders</h2>

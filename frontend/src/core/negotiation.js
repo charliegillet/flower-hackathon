@@ -25,6 +25,7 @@
 
 import { MARKET_BASE_RATE } from './banks.js';
 import { ALLOWED_BAND_KEYS } from './bands.js';
+import { rand, resetSeed } from './demo.js';
 
 const bandLo = (label) => (label ? Number(String(label).replace(/[^0-9.–-]/g, '').split(/[–-]/)[0]) : null);
 
@@ -102,6 +103,7 @@ export function startNegotiation(bands, banks, onEvent, opts = {}) {
   const ask = mandate.noPrepayPenalty === 'Required' ? 'Drop the prepayment penalty.' : mandate.priority === 'Least cash at closing' ? 'Offer a zero-points version.' : mandate.priority === 'Lowest monthly payment' ? 'Lower the rate, points are acceptable.' : 'Match the best fee total.';
   const months = bands.termMonths || 360;
   const horizon = opts.horizonYears || 7;
+  resetSeed();
   const timers = [];
   let t = 0;
   const at = (delay, ev) => { t += delay; timers.push(setTimeout(() => onEvent({ t: Math.round(t / 100) / 10, ...ev }), t)); };
@@ -111,7 +113,7 @@ export function startNegotiation(bands, banks, onEvent, opts = {}) {
   // Round 1: ranges go out to everyone at once.
   banks.forEach((b) => at(0, { type: 'sent', bankId: b.id, text: `Received applicant code ${bands.token}: ${describeBands(bands)}. No name, no exact figures.` }));
 
-  const order = [...banks].sort(() => Math.random() - 0.5);
+  const order = [...banks].sort(() => rand() - 0.5);
   order.forEach((b, i) => {
     const sheet = priceFromSheet(b, bands);
     sheets[b.id] = sheet;
@@ -141,7 +143,7 @@ export function startNegotiation(bands, banks, onEvent, opts = {}) {
     const best = Math.min(...Object.values(offers).map((o) => o.total));
     const canCut = cur.rate - 0.125 >= sheet.floor;
     const dropPrepay = b.prepayPenalty && mandate.noPrepayPenalty === 'Required' && !b.greedy;
-    const wants = cur.total > best && canCut && !b.greedy && Math.random() > 0.3;
+    const wants = cur.total > best && canCut && !b.greedy && rand() > 0.3;
     at(500 + i * 200, { type: 'thinking', bankId: b.id, text: wants ? `We are $${(cur.total - best).toLocaleString()} above the best offer. Our floor allows one more cut.` : cur.rate - 0.125 < sheet.floor ? 'We are at our floor. Code will not let us go lower.' : 'Holding. The margin is where we want it.' });
     if (wants) {
       const improved = { ...cur, rate: round8(Math.max(sheet.floor, cur.rate - 0.25)), prepayPenalty: dropPrepay ? false : cur.prepayPenalty };
