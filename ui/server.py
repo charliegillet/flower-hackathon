@@ -26,6 +26,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from pydantic import BaseModel
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -34,6 +35,8 @@ APP_DIR = ROOT / "blindquote"
 load_dotenv(ROOT / ".env")
 
 app = FastAPI(title="BlindQuote")
+# Local demo server: reject other Host headers (blocks DNS-rebinding pages from starting paid model runs).
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "[::1]"])
 
 
 @app.middleware("http")
