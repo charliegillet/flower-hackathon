@@ -17,13 +17,25 @@ export default function StageBanks({ bands, mandate = {}, principal, horizonYear
   const [done, setDone] = useState(null);
   // 'flower' = real Flower run (SuperLink + bank SuperNodes); 'simulated' = in-browser fallback.
   const [engine, setEngine] = useState(null);
+  const [fallbackNote, setFallbackNote] = useState(null);
   const [live, setLive] = useState({ nodes: 0, attest: null, market: null, narrative: '', error: null });
   const logRef = useRef(null);
 
   useEffect(() => {
     let run = { cancel: () => {} };
     let cancelled = false;
+    const startSimulated = () => {
+      setEngine('simulated');
+      run = startNegotiation(bands, BANKS, onEvent, { principal, horizonYears, mandate });
+    };
     const onEvent = (e) => {
+      if (e.type === 'fallback') {
+        if (cancelled) return;
+        setFallbackNote(e.reason === 'busy' ? 'Simulated: Flower busy' : 'Simulated: Flower prices home loans only');
+        setEvents([]);
+        startSimulated();
+        return;
+      }
       if (e.type === 'node') setLive((l) => ({ ...l, nodes: l.nodes + (e.role === 'coordinator' ? 0 : 1) }));
       else if (e.type === 'attest') setLive((l) => ({ ...l, attest: e }));
       else if (e.type === 'market') setLive((l) => ({ ...l, market: e }));
@@ -41,8 +53,7 @@ export default function StageBanks({ bands, mandate = {}, principal, horizonYear
         const priv = startNegotiation(bands, BANKS.filter((b) => b.kind === 'private'), onEvent, { principal, horizonYears, mandate });
         run = { cancel: () => { live.cancel(); priv.cancel(); } };
       } else {
-        setEngine('simulated');
-        run = startNegotiation(bands, BANKS, onEvent, { principal, horizonYears, mandate });
+        startSimulated();
       }
     });
     return () => { cancelled = true; run.cancel(); };
@@ -67,7 +78,13 @@ export default function StageBanks({ bands, mandate = {}, principal, horizonYear
 
   const scoreKey = mandate.priority === 'Lowest monthly payment' ? 'monthly' : mandate.priority === 'Least cash at closing' ? 'cash' : mandate.priority === 'Fastest close' ? 'closeDays' : 'total';
   const score = (o) => (scoreKey === 'cash' ? (o.points / 100) * principal + o.fees : o[scoreKey]);
-  const ranking = useMemo(() => BANKS.filter((b) => byBank[b.id].offer).sort((a, b) => score(byBank[a.id].offer) - score(byBank[b.id].offer)), [byBank, scoreKey]);
+  const ranking = useMemo(() => {
+    const quoted = BANKS.filter((b) => byBank[b.id].offer).sort((a, b) => score(byBank[a.id].offer) - score(byBank[b.id].offer));
+    const verdict = engine === 'flower' ? events.find((e) => e.type === 'verdict') : null;
+    if (!verdict?.ranking?.length) return quoted;
+    const pos = (b) => { const i = verdict.ranking.indexOf(b.id); return i < 0 ? Infinity : i; };
+    return [...quoted].sort((a, b) => pos(a) - pos(b));
+  }, [byBank, events, engine, scoreKey]);
   const checks = (o) => [
     mandate.maxPayment ? { label: `Payment under $${mandate.maxPayment.toLocaleString()}`, ok: o.monthly <= mandate.maxPayment, val: `$${o.monthly.toLocaleString()}` } : null,
     mandate.walkAwayRate ? { label: `Rate under ${mandate.walkAwayRate}%`, ok: o.rate < mandate.walkAwayRate, val: `${o.rate.toFixed(3)}%` } : null,
@@ -88,7 +105,7 @@ export default function StageBanks({ bands, mandate = {}, principal, horizonYear
         <div className="stage-head">
           <h2>Lenders</h2>
           <p className="sub">Six banks and two private lenders got the same sealed envelope. Click one to watch its agent.</p>
-          <EngineBadge engine={engine} live={live} />
+          <EngineBadge engine={engine} live={live} note={fallbackNote} />
         </div>
         {BANKS.map((b, idx) => {
           const s = byBank[b.id];
@@ -231,9 +248,9 @@ function Msg({ e, bank }) {
   return null;
 }
 
-function EngineBadge({ engine, live }) {
+function EngineBadge({ engine, live, note }) {
   if (!engine) return <div className="engine sub"><Spinner width={11} height={11} /> Connecting…</div>;
-  if (engine === 'simulated') return <div className="engine sub">Simulated in your browser (Flower bridge offline)</div>;
+  if (engine === 'simulated') return <div className="engine sub">{note || 'Simulated in your browser (Flower bridge offline)'}</div>;
   const credit = live.attest
     ? live.attest.selfReported
       ? `credit ${live.attest.ficoBand} self-reported (no bureau file)`

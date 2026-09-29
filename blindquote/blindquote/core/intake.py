@@ -89,7 +89,8 @@ def normalize(request: dict[str, Any]) -> tuple[dict[str, Any], str | None, int,
     bands = {
         "loan_band": f"${lo // 1000}k-${hi // 1000}k",
         "loan_mid": (lo + hi) // 2,
-        "ltv_band": pricing.ltv_band(max(ltv)),  # upper edge of the browser's range
+        # Upper edge of the browser's range; ">95%" has no upper edge, so it is the top band.
+        "ltv_band": pricing.LTV_BANDS[-1] if str(raw.get("ltvBand", "")).strip().startswith(">") else pricing.ltv_band(max(ltv)),
         "dti_band": pricing.dti_band(max(dti)),
         "occupancy": OCCUPANCY.get(str(raw.get("occupancy") or "").lower(), "primary"),
         "term_years": term_years,
@@ -108,4 +109,5 @@ def normalize(request: dict[str, Any]) -> tuple[dict[str, Any], str | None, int,
     except (TypeError, ValueError):
         horizon = 7
     token = request.get("consent_token") or raw.get("token")
-    return bands, (str(token) if token else None), min(max(horizon, 1), 30), pricing.fico_band(int(min(fico)))
+    horizon = min(max(horizon, 1), term_years)  # nothing to rank past the loan's payoff
+    return bands, (str(token) if token else None), horizon, pricing.fico_band(int(min(fico)))

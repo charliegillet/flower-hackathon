@@ -15,7 +15,10 @@ async function request(path, options = {}) {
   const res = await fetch(`/api${path}`, { ...options, headers });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `Request failed: ${res.status}`);
+    const err = new Error(body.error || `Request failed: ${res.status}`);
+    err.status = res.status;
+    err.unsupported = !!body.unsupported;
+    throw err;
   }
   return res.json();
 }
@@ -41,8 +44,8 @@ export const api = {
 // The backend relays these to the Flower bridge. Only the sealed bands object is sent.
 export const flower = {
   status: () => request('/flower/status'),
-  start: ({ bands, horizonYears, consentToken }) =>
-    request('/flower/runs', { method: 'POST', body: JSON.stringify({ bands, horizonYears, consentToken }) }),
+  start: ({ bands, horizonYears, consentToken }, signal) =>
+    request('/flower/runs', { method: 'POST', body: JSON.stringify({ bands, horizonYears, consentToken }), signal }),
 
   /** Stream a run's server-sent events. fetch (not EventSource) so the auth header is sent. */
   async stream(runId, onEvent, signal) {

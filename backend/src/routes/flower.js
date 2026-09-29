@@ -13,8 +13,12 @@ const BAND_KEYS = [
   'employmentStatus', 'purpose', 'termMonths', 'occupancy', 'residency', 'state', 'derogatory',
 ];
 
-const runs = new Map(); // runId -> { userId, createdAt }
+const runs = new Map(); // runId -> { userId, createdAt, finished }
 const RUN_TTL_MS = 30 * 60 * 1000;
+// Every run spends model credits: one active run per user, a few at a time overall.
+const ACTIVE_WINDOW_MS = 5 * 60 * 1000;
+const MAX_ACTIVE_RUNS = Number(process.env.FLOWER_MAX_ACTIVE_RUNS || 3);
+const isActive = (run, now) => !run.finished && now - run.createdAt < ACTIVE_WINDOW_MS;
 
 function sanitizeBands(bands) {
   const out = {};
@@ -34,7 +38,8 @@ router.get('/status', async (_req, res) => {
   try {
     const r = await fetch(`${BRIDGE}/api/status`, { signal: AbortSignal.timeout(3000) });
     const body = await r.json();
-    res.json({ available: r.ok, mode: body.default_mode, modes: body.modes });
+    // Available only if the bridge answers AND its federation for the default mode is up.
+    res.json({ available: r.ok && Boolean(body.modes?.[body.default_mode]), mode: body.default_mode, modes: body.modes });
   } catch {
     res.json({ available: false });
   }
@@ -44,6 +49,16 @@ router.post('/runs', async (req, res) => {
   const { bands, horizonYears, consentToken } = req.body || {};
   const clean = sanitizeBands(bands);
   if (!clean.loanBand || !clean.ficoBand) return res.status(400).json({ error: 'Sealed bands are required' });
+  // The Flower engine prices home loans from loan, LTV, DTI and credit bands; anything else uses the simulation.
+  if ((clean.purpose && clean.purpose !== 'home') || !clean.ltvBand || !clean.dtiBand) {
+    return res.status(422).json({ error: 'Flower prices home loans with a property price', unsupported: true });
+  }
+  const now = Date.now();
+  const active = [...runs.values()].filter((run) => isActive(run, now));
+  if (active.some((run) => run.userId === String(req.user._id))) {
+    return res.status(429).json({ error: 'You already have a negotiation running' });
+  }
+  if (active.length >= MAX_ACTIVE_RUNS) return res.status(429).json({ error: 'Flower is busy, try again shortly' });
   try {
     const r = await fetch(`${BRIDGE}/api/runs`, {
       method: 'POST',
@@ -59,9 +74,8 @@ router.post('/runs', async (req, res) => {
     });
     if (!r.ok) return res.status(502).json({ error: `Flower bridge answered ${r.status}` });
     const { run_id: runId, mode } = await r.json();
-    const now = Date.now();
     for (const [id, run] of runs) if (now - run.createdAt > RUN_TTL_MS) runs.delete(id);
-    runs.set(runId, { userId: String(req.user._id), createdAt: now });
+    runs.set(runId, { userId: String(req.user._id), createdAt: now, finished: false });
     res.json({ runId, mode });
   } catch (err) {
     res.status(503).json({ error: `Flower bridge unavailable: ${err.message}` });
@@ -72,7 +86,7 @@ router.get('/runs/:id/events', async (req, res) => {
   const run = runs.get(req.params.id);
   if (!run || run.userId !== String(req.user._id)) return res.status(404).json({ error: 'Unknown run' });
   const ctrl = new AbortController();
-  req.on('close', () => ctrl.abort());
+  res.on('close', () => ctrl.abort());
   try {
     const upstream = await fetch(`${BRIDGE}/api/runs/${encodeURIComponent(req.params.id)}/events`, { signal: ctrl.signal });
     if (!upstream.ok || !upstream.body) return res.status(502).json({ error: 'Run stream unavailable' });
@@ -83,6 +97,7 @@ router.get('/runs/:id/events', async (req, res) => {
       'X-Accel-Buffering': 'no', // nginx: stream immediately
     });
     for await (const chunk of upstream.body) res.write(chunk);
+    run.finished = true;
     res.end();
   } catch (err) {
     if (!res.headersSent) res.status(502).json({ error: err.message });

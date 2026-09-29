@@ -132,7 +132,7 @@ def total_cost(
     Upfront points and fees plus all interest paid during the horizon (principal
     repaid is excluded because every offer repays the same principal).
     """
-    months = horizon_years * 12
+    months = min(horizon_years, term_years) * 12  # a horizon past the payoff date costs nothing more
     pmt = monthly_payment(principal, rate_pct, term_years)
     principal_repaid = principal - balance_after(principal, rate_pct, months, term_years)
     interest = pmt * months - principal_repaid

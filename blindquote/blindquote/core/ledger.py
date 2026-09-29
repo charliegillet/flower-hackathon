@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-RAW_PROFILE_FIELDS = ["name", "exact income", "assets", "exact credit score", "monthly debts", "employer"]
+RAW_PROFILE_FIELDS = ["name", "exact income", "exact assets", "exact credit score", "monthly debts", "employer"]
 
 
 class Ledger:

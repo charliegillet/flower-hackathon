@@ -276,3 +276,25 @@ def test_device_bands_without_bureau_file_are_self_reported():
 def test_device_bands_reject_raw_fields_and_non_home_loans(bad):
     with pytest.raises(RuntimeError, match="Cannot price"):
         _device_run({"bands": bad, "horizon_years": 7})
+
+
+def test_horizon_past_term_and_ltv_over_95_are_handled():
+    from blindquote.core.intake import normalize
+    assert pricing.total_cost(675_000, 6.5, 0, 1000, horizon_years=30, term_years=15) > 0
+    bands, _, horizon, _ = normalize({"bands": dict(DEVICE_BANDS, termMonths=180), "horizon_years": 30})
+    assert horizon == 15
+    bands, *_ = normalize({"bands": dict(DEVICE_BANDS, ltvBand=">95%")})
+    assert bands["ltv_band"] == ">95%"
+
+
+def test_bank_ledger_lists_every_band_it_received():
+    events, _ = _device_run({"bands": DEVICE_BANDS, "consent_token": "consent_demo_maya", "horizon_years": 7})
+    ledger = next(e for e in events if e["type"] == "bq.ledger")
+    banks = [p for p in ledger["parties"] if p["role"] == "bank"]
+    assert banks
+    for p in banks:
+        learned = " | ".join(p["learned"])
+        assert "assets band" in learned and "time in job" in learned and "state CA" in learned
+        assert "credit issues in 7 yrs: no" in learned
+        assert "loan_mid" not in learned
+        assert "exact assets" in p["never"] and "assets" not in p["never"]

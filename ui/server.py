@@ -18,6 +18,7 @@ import os
 import queue
 import socket
 import threading
+import time
 import uuid
 from pathlib import Path
 from typing import Any, Iterator
@@ -46,7 +47,9 @@ async def no_cache(request, call_next):
     if not request.url.path.startswith("/api/"):
         response.headers["Cache-Control"] = "no-cache"
     return response
-_runs: dict[str, queue.Queue] = {}
+_runs: dict[str, tuple[queue.Queue, float]] = {}
+RUN_TTL = 30 * 60
+FLOWER_STREAM_LIMIT = 330
 FORWARD_PREFIXES = ("bq.", "response.output_text.delta", "response.completed")
 
 
@@ -114,6 +117,7 @@ def _run_flower(prompt: str, connection: str, federation: str | None, q: queue.Q
     local_agent = build_local_agent(APP_DIR)
     conn = read_superlink_connection(connection)
     stub = init_http_client_from_connection(conn)
+    started = time.monotonic()
     try:
         run_id, _ = start_chat_run(
             stub, prompt, federation or conn.federation, None,
@@ -121,6 +125,9 @@ def _run_flower(prompt: str, connection: str, federation: str | None, q: queue.Q
         )
         q.put({"type": "bq.flower_run", "ts": 0, "run_id": run_id, "connection": connection})
         for res in stub.StreamRunEvents(StreamRunEventsRequest(run_id=run_id)):
+            if time.monotonic() - started > FLOWER_STREAM_LIMIT:
+                q.put({"type": "bq.error", "ts": 0, "message": "Flower run timed out"})
+                return
             event_type, payload = parse_task_event(res.task_event)
             if event_type in {"error", "response.failed"}:
                 q.put({"type": "bq.error", "ts": payload.get("ts", 0), "message": json.dumps(payload)[:400]})
@@ -130,24 +137,39 @@ def _run_flower(prompt: str, connection: str, federation: str | None, q: queue.Q
                 q.put(payload)
                 if event_type in {"bq.done", "bq.error"}:
                     return
+        q.put({"type": "bq.error", "ts": 0, "message": "Flower run ended before completing"})
     finally:
         stub.close()
 
 
 def _worker(mode: str, prompt: str, q: queue.Queue) -> None:
+    seen = {"terminal": False}
+
+    class _Tracked:
+        def put(self, event: Any) -> None:
+            if isinstance(event, dict) and event.get("type") in {"bq.done", "bq.error"}:
+                seen["terminal"] = True
+            q.put(event)
+
     try:
-        if mode == "sim":
-            _run_sim(prompt, q)
-        elif mode == "local":
-            _run_flower(prompt, "local-agent", None, q)
-        elif mode == "supergrid":
-            _run_flower(prompt, "supergrid", os.environ.get("BQ_FEDERATION"), q)
-        else:
-            raise ValueError(f"unknown mode {mode!r}")
+        _dispatch(mode, prompt, _Tracked())  # type: ignore[arg-type]
+        if not seen["terminal"]:
+            q.put({"type": "bq.error", "ts": 0, "message": "Run ended without a result"})
     except Exception as exc:  # noqa: BLE001 - surface every failure to the UI
         q.put({"type": "bq.error", "ts": 0, "message": f"{type(exc).__name__}: {exc}"[:500]})
     finally:
         q.put(None)
+
+
+def _dispatch(mode: str, prompt: str, q: queue.Queue) -> None:
+    if mode == "sim":
+        _run_sim(prompt, q)
+    elif mode == "local":
+        _run_flower(prompt, "local-agent", None, q)
+    elif mode == "supergrid":
+        _run_flower(prompt, "supergrid", os.environ.get("BQ_FEDERATION"), q)
+    else:
+        raise ValueError(f"unknown mode {mode!r}")
 
 
 @app.post("/api/runs")
@@ -163,28 +185,34 @@ def create_run(req: RunRequest) -> dict[str, str]:
         raise HTTPException(400, "send a prompt or a request")
     run_id = uuid.uuid4().hex[:12]
     q: queue.Queue = queue.Queue()
-    _runs[run_id] = q
+    now = time.monotonic()
+    for stale in [r for r, (_, t) in _runs.items() if now - t > RUN_TTL]:
+        _runs.pop(stale, None)
+    _runs[run_id] = (q, now)
     threading.Thread(target=_worker, args=(mode, prompt, q), daemon=True).start()
     return {"run_id": run_id, "mode": mode}
 
 
 @app.get("/api/runs/{run_id}/events")
 def run_events(run_id: str) -> StreamingResponse:
-    q = _runs.get(run_id)
-    if q is None:
+    entry = _runs.get(run_id)
+    if entry is None:
         raise HTTPException(404, "unknown run")
+    q = entry[0]
 
     def stream() -> Iterator[str]:
-        while True:
-            try:
-                event = q.get(timeout=15)
-            except queue.Empty:
-                yield ": keep-alive\n\n"
-                continue
-            if event is None:
-                _runs.pop(run_id, None)
-                return
-            yield f"data: {json.dumps(event, default=str)}\n\n"
+        try:
+            while True:
+                try:
+                    event = q.get(timeout=15)
+                except queue.Empty:
+                    yield ": keep-alive\n\n"
+                    continue
+                if event is None:
+                    return
+                yield f"data: {json.dumps(event, default=str)}\n\n"
+        finally:
+            _runs.pop(run_id, None)
 
     return StreamingResponse(stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
 
