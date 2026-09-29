@@ -17,13 +17,25 @@ export default function StageBanks({ bands, principal, horizonYears, consentToke
   const [done, setDone] = useState(null);
   // 'flower' = real Flower run (SuperLink + bank SuperNodes); 'simulated' = in-browser fallback.
   const [engine, setEngine] = useState(null);
+  const [fallbackNote, setFallbackNote] = useState(null);
   const [live, setLive] = useState({ nodes: 0, attest: null, market: null, narrative: '', error: null });
   const logRef = useRef(null);
 
   useEffect(() => {
     let run = { cancel: () => {} };
     let cancelled = false;
+    const startSimulated = () => {
+      setEngine('simulated');
+      run = startNegotiation(bands, BANKS, onEvent, { principal, horizonYears });
+    };
     const onEvent = (e) => {
+      if (e.type === 'fallback') {
+        if (cancelled) return;
+        setFallbackNote(e.reason === 'busy' ? 'Simulated: Flower busy' : 'Simulated: Flower prices home loans only');
+        setEvents([]);
+        startSimulated();
+        return;
+      }
       if (e.type === 'node') setLive((l) => ({ ...l, nodes: l.nodes + (e.role === 'coordinator' ? 0 : 1) }));
       else if (e.type === 'attest') setLive((l) => ({ ...l, attest: e }));
       else if (e.type === 'market') setLive((l) => ({ ...l, market: e }));
@@ -38,8 +50,7 @@ export default function StageBanks({ bands, principal, horizonYears, consentToke
         setEngine('flower');
         run = startFlowerNegotiation(bands, onEvent, { horizonYears, consentToken });
       } else {
-        setEngine('simulated');
-        run = startNegotiation(bands, BANKS, onEvent, { principal, horizonYears });
+        startSimulated();
       }
     });
     return () => { cancelled = true; run.cancel(); };
@@ -62,7 +73,13 @@ export default function StageBanks({ bands, principal, horizonYears, consentToke
     return m;
   }, [events]);
 
-  const ranking = useMemo(() => BANKS.filter((b) => byBank[b.id].offer).sort((a, b) => byBank[a.id].offer.total - byBank[b.id].offer.total), [byBank]);
+  const ranking = useMemo(() => {
+    const quoted = BANKS.filter((b) => byBank[b.id].offer).sort((a, b) => byBank[a.id].offer.total - byBank[b.id].offer.total);
+    const verdict = engine === 'flower' ? events.find((e) => e.type === 'verdict') : null;
+    if (!verdict?.ranking?.length) return quoted;
+    const pos = (b) => { const i = verdict.ranking.indexOf(b.id); return i < 0 ? Infinity : i; };
+    return [...quoted].sort((a, b) => pos(a) - pos(b));
+  }, [byBank, events, engine]);
   const leader = ranking[0];
   const round2 = events.find((e) => e.type === 'round2');
   const bank = BANKS.find((b) => b.id === selected);
@@ -76,7 +93,7 @@ export default function StageBanks({ bands, principal, horizonYears, consentToke
         <div className="stage-head">
           <h2>Banks</h2>
           <p className="sub">Each bank got the same sealed envelope. Click one to watch its agent.</p>
-          <EngineBadge engine={engine} live={live} />
+          <EngineBadge engine={engine} live={live} note={fallbackNote} />
         </div>
         {BANKS.map((b) => {
           const s = byBank[b.id];
@@ -200,9 +217,9 @@ function Msg({ e, bank }) {
   return null;
 }
 
-function EngineBadge({ engine, live }) {
+function EngineBadge({ engine, live, note }) {
   if (!engine) return <div className="engine sub"><Spinner width={11} height={11} /> Connecting…</div>;
-  if (engine === 'simulated') return <div className="engine sub">Simulated in your browser (Flower bridge offline)</div>;
+  if (engine === 'simulated') return <div className="engine sub">{note || 'Simulated in your browser (Flower bridge offline)'}</div>;
   const credit = live.attest
     ? live.attest.selfReported
       ? `credit ${live.attest.ficoBand} self-reported (no bureau file)`
