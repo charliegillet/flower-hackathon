@@ -1,7 +1,0 @@
-{
-  "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"P=/Users/charlie/.cache/uv/archive-v0/2jxRBjN70a0tPQod/lib/python3.12/site-packages/flwr; sed -n '15,400p' $P/agentapp/base.py | grep -v '^#'; echo =====; wc -l $P/supercore/task_process/a...",
-  "error": "Exit code 1\n\"\"\"AgentApp abstract base classes and callable type alias.\"\"\"\n\n\nfrom __future__ import annotations\n\nfrom abc import ABC, abstractmethod\nfrom collections.abc import Callable, Sequence\n\nfrom flwr.app import Context\nfrom flwr.supercore.typing import JSONObject\n\n\nclass AgentConnectors(ABC):\n    \"\"\"Abstract base class for AgentApp connector execution.\"\"\"\n\n    @abstractmethod\n    def tools(self, names: Sequence[str]) -> list[JSONObject]:\n        \"\"\"Return model-facing tool schemas for buil...",
-  "timestamp": "2026-09-29T18:48:58.491Z",
-  "retry_count": 1
-}
