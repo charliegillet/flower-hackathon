@@ -62,35 +62,65 @@ def ensure_connection() -> None:
         print(f"added [superlink.local-agent] to {cfg}")
 
 
+def _required_env(provider: str | None) -> list[str]:
+    if provider == "nebius-kimi":
+        return ["NEBIUS_MODEL_API_ENDPOINT", "NEBIUS_KIMI_API_KEY"]
+    if provider == "nebius-minimax":
+        return ["NEBIUS_MODEL_API_ENDPOINT", "NEBIUS_MINIMAX_API_KEY"]
+    return []
+
+
+def _check_env(topology: list[dict], env: dict[str, str]) -> None:
+    """Fail before spawning anything if a node's provider variables are missing from .env."""
+    missing = sorted({k for spec in topology for k in _required_env(spec.get("provider")) if not env.get(k)})
+    if missing:
+        raise SystemExit(f"missing in .env (needed by the node providers): {', '.join(missing)}")
+
+
+def _minimal_env(extra: dict[str, str]) -> dict[str, str]:
+    """A node sees PATH/HOME/locale plus its own variables, never the launcher's other secrets."""
+    keep = {k: os.environ[k] for k in ("HOME", "LANG", "LC_ALL") if k in os.environ}
+    path = f"{Path(sys.executable).parent}{os.pathsep}{os.environ.get('PATH', '/usr/local/bin:/usr/bin:/bin')}"
+    return {**keep, "PATH": path, **extra}
+
+
+def _spawn(name: str, cmd: list[str], env: dict[str, str], pids: dict[str, int]) -> None:
+    with open(STATE / "logs" / f"{name}.log", "a") as log:
+        log.write(f"\n=== {time.strftime('%Y-%m-%dT%H:%M:%S%z')} starting {name} ===\n")
+        log.flush()
+        pids[name] = subprocess.Popen(
+            cmd, cwd=ROOT / "blindquote", env=env, stdout=log, stderr=subprocess.STDOUT, start_new_session=True,
+        ).pid
+    PIDS.write_text(json.dumps(pids, indent=2))  # incremental, so down() can always clean up
+
+
 def up(foreground: bool = False) -> None:
     if PIDS.exists() and not foreground:
         print("already running (run `down` first)")
         return
     env_file = {k: v for k, v in dotenv_values(ROOT / ".env").items() if v}
+    topology = json.loads((ROOT / "deploy" / "topology.json").read_text())["nodes"]
+    _check_env(topology, env_file)
     STATE.mkdir(exist_ok=True)
     (STATE / "logs").mkdir(exist_ok=True)
     ensure_connection()
     pids: dict[str, int] = {}
 
-    base = {**os.environ, "PATH": f"{Path(sys.executable).parent}{os.pathsep}{os.environ['PATH']}"}
-    link_env = {**base, **_provider_env("flower", env_file), "FLWR_HOME": str(STATE / "superlink")}
-    log = open(STATE / "logs" / "superlink.log", "w")
-    pids["superlink"] = subprocess.Popen(
-        [_bin("flower-superlink"), "--insecure", "--database", str(STATE / "superlink.db")],
-        cwd=ROOT / "blindquote", env=link_env, stdout=log, stderr=subprocess.STDOUT, start_new_session=True,
-    ).pid
-    time.sleep(4)
-
-    topology = json.loads((ROOT / "deploy" / "topology.json").read_text())["nodes"]
-    for i, spec in enumerate(topology):
-        node_env = {**base, **_provider_env(spec.get("provider"), env_file), "FLWR_HOME": str(STATE / spec["key"])}
-        log = open(STATE / "logs" / f"{spec['key']}.log", "w")
-        pids[spec["key"]] = subprocess.Popen(
-            [_bin("flower-supernode"), "--insecure", "--superlink", "127.0.0.1:9092",
-             "--port", str(9110 + i), "--node-config", _node_config(spec["node_config"])],
-            cwd=ROOT / "blindquote", env=node_env, stdout=log, stderr=subprocess.STDOUT, start_new_session=True,
-        ).pid
-    PIDS.write_text(json.dumps(pids, indent=2))
+    try:
+        # Fleet API bound to loopback: the default is 0.0.0.0 and this launcher runs --insecure.
+        _spawn("superlink", [
+            _bin("flower-superlink"), "--insecure", "--database", str(STATE / "superlink.db"),
+            "--fleet-api-address", "127.0.0.1:9092", "--host", "127.0.0.1",
+        ], _minimal_env({**_provider_env("flower", env_file), "FLWR_HOME": str(STATE / "superlink")}), pids)
+        time.sleep(4)
+        for i, spec in enumerate(topology):
+            _spawn(spec["key"], [
+                _bin("flower-supernode"), "--insecure", "--superlink", "127.0.0.1:9092",
+                "--host", "127.0.0.1", "--port", str(9110 + i), "--node-config", _node_config(spec["node_config"]),
+            ], _minimal_env({**_provider_env(spec.get("provider"), env_file), "FLWR_HOME": str(STATE / spec["key"])}), pids)
+    except BaseException:
+        down()
+        raise
     print("started:", ", ".join(pids), f"\nlogs: {STATE / 'logs'}", flush=True)
     if foreground:
         _supervise(pids)
