@@ -554,11 +554,14 @@ function reduce(evt) {
     case "bq.attest": {
       const box = $("#attest");
       box.hidden = false;
-      box.classList.toggle("bad", !evt.signature_ok);
+      // signature_ok is null until the banks (who hold the verification key) report back.
+      box.classList.toggle("bad", evt.signature_ok === false);
       $("#attest-band").textContent = `FICO ${evt.fico_band}`;
-      $("#attest-by").textContent = evt.signature_ok
-        ? `Signed by ${evt.bureau}. Signature verified; your exact score stayed at the bureau.`
-        : `Signature from ${evt.bureau} failed verification. Banks will not accept this band.`;
+      $("#attest-by").textContent = evt.signature_ok === true
+        ? `Signed by ${evt.bureau} for this session only. Verified by ${evt.verified_by ?? "every"} bank${evt.verified_by === 1 ? "" : "s"}; your exact score stayed at the bureau.`
+        : evt.signature_ok === false
+          ? `Signature from ${evt.bureau} failed verification at a bank. Banks will not accept this band.`
+          : `Signed by ${evt.bureau} for this session only. Banks verify it with their quotes; your exact score stays at the bureau.`;
       box.style.animation = "none"; void box.offsetWidth; box.style.animation = "arrive 900ms ease-out";
       break;
     }
