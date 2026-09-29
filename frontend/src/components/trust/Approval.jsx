@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Lock, Arrow, Check, Block } from './Icons.jsx';
 
 /**
@@ -8,12 +8,14 @@ import { Lock, Arrow, Check, Block } from './Icons.jsx';
  */
 export default function Approval({ kicker, title, releases = [], keeps = [], approveLabel = 'Approve', backLabel = 'Back', onApprove, onBack, children, amber, autoSeconds }) {
   const [left, setLeft] = useState(autoSeconds || 0);
+  const backRef = useRef(onBack);
+  backRef.current = onBack;
   useEffect(() => {
     if (!autoSeconds) return;
     setLeft(autoSeconds);
-    const id = setInterval(() => setLeft((s) => { if (s <= 1) { clearInterval(id); onBack?.(); return 0; } return s - 1; }), 1000);
+    const id = setInterval(() => setLeft((s) => { if (s <= 1) { clearInterval(id); setTimeout(() => backRef.current?.(), 0); return 0; } return s - 1; }), 1000);
     return () => clearInterval(id);
-  }, [autoSeconds, onBack]);
+  }, [autoSeconds]);
 
   return (
     <div className="scrim" onClick={onBack}>

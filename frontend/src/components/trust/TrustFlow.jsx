@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import StageAnswers from './StageAnswers.jsx';
 import StageSeal from './StageSeal.jsx';
 import StageBanks from './StageBanks.jsx';
@@ -42,6 +42,7 @@ export default function TrustFlow({ user, onAccepted, onError }) {
   // Disclosure ledger recorded by the real Flower run (null = show the policy summary).
   const [ledger, setLedger] = useState(null);
   const onLedger = useCallback((parties) => setLedger(parties), []);
+  const onBlocked = useCallback(() => setCounts((c) => ({ ...c, blocked: c.blocked + 1 })), []);
   useEffect(() => { if (stage !== 'banks') setLedger(null); }, [stage]);
   // Editing any answer after "Fill with sample data" invalidates the demo consent token.
   const editForm = useCallback((next) => setForm((prev) => {
@@ -50,6 +51,8 @@ export default function TrustFlow({ user, onAccepted, onError }) {
   }), []);
   const stages = STAGES.filter((s) => !s.homeOnly || form.purpose === 'home').map((s, i) => ({ ...s, n: i + 1 }));
   const reached = stages.findIndex((s) => s.key === stage);
+  // Stable object: StageBanks restarts the negotiation when this identity changes.
+  const mandate = useMemo(() => mandateOf(form), [form]);
   const [deal, setDeal] = useState(null);
   // Gates: nothing crosses until the user approves. `gate` is the card being shown.
   const [gate, setGate] = useState(null); // 'seal' | 'send' | 'ranges' | { accept }
@@ -92,7 +95,7 @@ export default function TrustFlow({ user, onAccepted, onError }) {
         />
       )}
       {stage === 'banks' && bands && (
-        <StageBanks bands={bands} mandate={mandateOf(form)} principal={principal} horizonYears={horizonYears} consentToken={form._consentToken || null} onLedger={onLedger} onOpenLedger={() => setLedgerOpen(true)} onBlocked={() => setCounts((c) => ({ ...c, blocked: c.blocked + 1 }))} onAccept={(bank, offer) => setGate({ accept: { bank, offer } })} />
+        <StageBanks bands={bands} mandate={mandate} principal={principal} horizonYears={horizonYears} consentToken={form._consentToken || null} onLedger={onLedger} onOpenLedger={() => setLedgerOpen(true)} onBlocked={onBlocked} onAccept={(bank, offer) => setGate({ accept: { bank, offer } })} />
       )}
 
       {gate === 'seal' && (
