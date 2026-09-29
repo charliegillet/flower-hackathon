@@ -22,6 +22,8 @@ from ..protocol import GuardViolation, check, decode, encode, requested_fields_v
 
 COORD = "coordinator"
 APR_TOLERANCE = 0.125  # TILA tolerance for regular transactions (1/8 point)
+RUN_BUDGET_S = 240.0  # whole run, well inside Flower's 5-minute task window
+VERDICT_RESERVE_S = 25.0  # always kept back for ranking + explanation
 
 
 @dataclass
@@ -53,6 +55,7 @@ class Coordinator:
         fetch: Callable[[str], str | None] | None = None,
         timeouts: Timeouts | None = None,
         mode: str = "flower",
+        budget_s: float = RUN_BUDGET_S,
     ) -> None:
         self.grid = grid
         self.ev = emitter
@@ -60,6 +63,7 @@ class Coordinator:
         self.fetch = fetch
         self.t = timeouts or Timeouts()
         self.mode = mode
+        self.budget_s = budget_s
         self.session = secrets.token_hex(6)
         self.ledger = Ledger()
         self.nodes: dict[str, dict[str, Any]] = {}
@@ -70,6 +74,8 @@ class Coordinator:
         """Push messages, then poll so replies surface as they arrive. Returns node ids that timed out."""
         ids = self.grid.push([(dst, encode(msg)) for dst, msg in sends])
         pending = {mid: dst for mid, (dst, _) in zip(ids, sends) if mid}
+        # Never let one stage eat the time reserved for the verdict.
+        timeout = max(min(timeout, self.remaining - VERDICT_RESERVE_S), 1.0)
         deadline = self.ev.elapsed + timeout
         while pending and self.ev.elapsed < deadline:
             replies, _ = self.grid.pull(list(pending), timeout=min(2.0, max(deadline - self.ev.elapsed, 0)))
@@ -82,6 +88,10 @@ class Coordinator:
                 else:
                     on_reply(dst, decode(rep.get("payload")))
         return list(pending.values())
+
+    @property
+    def remaining(self) -> float:
+        return self.budget_s - self.ev.elapsed
 
     def _isolated(self, states: dict[str, BankState], rnd: int, handler: Callable[[str, dict[str, Any]], None]) -> Callable[[str, dict[str, Any]], None]:
         """One misbehaving bank declines; it never crashes the negotiation."""
@@ -120,7 +130,7 @@ class Coordinator:
         states = {nid: BankState(nid, self.nodes[nid]["name"], self.nodes[nid].get("model")) for nid in banks}
         self._round1(states, bands, attestation)
         self._round2(states, bands, attestation)
-        market = market_context(self.fetch)
+        market = market_context(self.fetch if self.remaining > 45 else None)
         ev.emit("bq.market", pmms_30y=market["pmms_30y"], as_of=market["as_of"], source=market["source"])
         verdict = self._verdict(states, bands)
         ev.raw(self.ledger.to_event() | {"ts": ev.elapsed})
@@ -392,11 +402,16 @@ class Coordinator:
         )
         prompt = json.dumps({"verdict": verdict, "bands": {k: bands[k] for k in ("loan_band", "ltv_band", "horizon_years")},
                              "market_30y_avg": market}, default=str)
-        stream = self.llm.stream(instructions, prompt)
         wrote = False
+        stream = None
+        if self.remaining > 20:
+            self.llm.timeout = min(self.llm.timeout, self.remaining - 10)
+            stream = self.llm.stream(instructions, prompt)
         if stream is not None:
             try:
                 for event in stream:
+                    if self.remaining < 5:
+                        break
                     etype = event.get("type")
                     if etype == "response.output_text.delta":
                         wrote = True

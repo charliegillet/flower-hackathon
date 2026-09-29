@@ -192,3 +192,24 @@ def test_banks_never_see_the_consent_token_and_verify_the_band(run_events):
     attests = [e for e in events if e["type"] == "bq.attest"]
     assert attests[0]["signature_ok"] is None and attests[-1]["signature_ok"] is True
     assert attests[-1]["verified_by"] == 4
+
+
+def test_run_budget_is_respected_when_a_bank_is_silent(monkeypatch):
+    import sim.inprocess as inproc
+
+    real = inproc.handle_node_message
+
+    def silent_bank(msg, cfg, llm):
+        if cfg.get("name") == "Golden Gate Credit Union" and msg.get("kind") == "quote_request":
+            import time as _t
+            _t.sleep(4)  # never answers within the (tiny) budget
+        return real(msg, cfg, llm)
+
+    monkeypatch.setattr(inproc, "handle_node_message", silent_bank)
+    grid = build_federation(use_llm=False, latency=False)
+    events: list[dict] = []
+    Coordinator(grid, Emitter(events.append), NO_LLM, timeouts=Timeouts(30, 30, 30, 90, 90), mode="sim",
+                budget_s=28.0).run("x")
+    grid.close()
+    assert events[-1]["type"] == "bq.done" and events[-1]["elapsed_s"] < 28.0
+    assert any(e["type"] == "bq.decline" and e["reason"] == "timeout" for e in events)
