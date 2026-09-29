@@ -13,8 +13,12 @@ const BAND_KEYS = [
   'employmentStatus', 'purpose', 'termMonths', 'occupancy', 'residency', 'state', 'derogatory',
 ];
 
-const runs = new Map(); // runId -> { userId, createdAt }
+const runs = new Map(); // runId -> { userId, createdAt, finished }
 const RUN_TTL_MS = 30 * 60 * 1000;
+// Every run spends model credits: one active run per user, a few at a time overall.
+const ACTIVE_WINDOW_MS = 5 * 60 * 1000;
+const MAX_ACTIVE_RUNS = Number(process.env.FLOWER_MAX_ACTIVE_RUNS || 3);
+const isActive = (run, now) => !run.finished && now - run.createdAt < ACTIVE_WINDOW_MS;
 
 function sanitizeBands(bands) {
   const out = {};
@@ -44,6 +48,12 @@ router.post('/runs', async (req, res) => {
   const { bands, horizonYears, consentToken } = req.body || {};
   const clean = sanitizeBands(bands);
   if (!clean.loanBand || !clean.ficoBand) return res.status(400).json({ error: 'Sealed bands are required' });
+  const now = Date.now();
+  const active = [...runs.values()].filter((run) => isActive(run, now));
+  if (active.some((run) => run.userId === String(req.user._id))) {
+    return res.status(429).json({ error: 'You already have a negotiation running' });
+  }
+  if (active.length >= MAX_ACTIVE_RUNS) return res.status(429).json({ error: 'Flower is busy, try again shortly' });
   try {
     const r = await fetch(`${BRIDGE}/api/runs`, {
       method: 'POST',
@@ -59,9 +69,8 @@ router.post('/runs', async (req, res) => {
     });
     if (!r.ok) return res.status(502).json({ error: `Flower bridge answered ${r.status}` });
     const { run_id: runId, mode } = await r.json();
-    const now = Date.now();
     for (const [id, run] of runs) if (now - run.createdAt > RUN_TTL_MS) runs.delete(id);
-    runs.set(runId, { userId: String(req.user._id), createdAt: now });
+    runs.set(runId, { userId: String(req.user._id), createdAt: now, finished: false });
     res.json({ runId, mode });
   } catch (err) {
     res.status(503).json({ error: `Flower bridge unavailable: ${err.message}` });
@@ -83,6 +92,7 @@ router.get('/runs/:id/events', async (req, res) => {
       'X-Accel-Buffering': 'no', // nginx: stream immediately
     });
     for await (const chunk of upstream.body) res.write(chunk);
+    run.finished = true;
     res.end();
   } catch (err) {
     if (!res.headersSent) res.status(502).json({ error: err.message });
