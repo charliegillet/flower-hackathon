@@ -3,337 +3,346 @@
   {
    "type": "bq.run",
    "ts": 0.0,
-   "prompt": "Find me the best 30-year fixed for the $850k home — I plan to stay about 7 years.",
+   "prompt": "Find me the best 30-year fixed for the $850k home - I plan to stay about 7 years.",
    "mode": "sim",
    "horizon_years": 7
   },
   {
+   "type": "bq.node",
+   "ts": 0.0,
+   "node_id": "coordinator",
+   "role": "coordinator",
+   "name": "BlindQuote Coordinator",
+   "org_kind": "Neutral broker (SuperGrid)",
+   "model": "flwrlabs/endeavor-1.0",
+   "location": null
+  },
+  {
    "type": "bq.stage",
-   "ts": 0.3,
+   "ts": 0.0,
    "stage": "discover",
    "status": "start",
-   "label": "Discovering SuperNodes on the grid"
+   "label": "Discovering SuperNodes on the federation"
   },
   {
    "type": "bq.msg",
-   "ts": 0.9,
+   "ts": 0.0,
    "from": "coordinator",
-   "to": "4127739015582203311",
+   "to": "1000",
    "kind": "hello",
-   "summary": "Hello, Your device: what role do you play?",
+   "summary": "Who are you?",
    "fields": [
-    "role_query"
+    "kind"
    ],
    "sealed": false
   },
   {
    "type": "bq.msg",
-   "ts": 1.45,
+   "ts": 0.0,
    "from": "coordinator",
-   "to": "9360018824471156027",
+   "to": "1001",
    "kind": "hello",
-   "summary": "Hello, Sequoia Credit Bureau: what role do you play?",
+   "summary": "Who are you?",
    "fields": [
-    "role_query"
+    "kind"
    ],
    "sealed": false
   },
   {
    "type": "bq.msg",
-   "ts": 1.6,
-   "from": "4127739015582203311",
+   "ts": 0.0,
+   "from": "coordinator",
+   "to": "1002",
+   "kind": "hello",
+   "summary": "Who are you?",
+   "fields": [
+    "kind"
+   ],
+   "sealed": false
+  },
+  {
+   "type": "bq.msg",
+   "ts": 0.0,
+   "from": "coordinator",
+   "to": "1003",
+   "kind": "hello",
+   "summary": "Who are you?",
+   "fields": [
+    "kind"
+   ],
+   "sealed": false
+  },
+  {
+   "type": "bq.msg",
+   "ts": 0.0,
+   "from": "coordinator",
+   "to": "1004",
+   "kind": "hello",
+   "summary": "Who are you?",
+   "fields": [
+    "kind"
+   ],
+   "sealed": false
+  },
+  {
+   "type": "bq.msg",
+   "ts": 0.0,
+   "from": "coordinator",
+   "to": "1005",
+   "kind": "hello",
+   "summary": "Who are you?",
+   "fields": [
+    "kind"
+   ],
+   "sealed": false
+  },
+  {
+   "type": "bq.msg",
+   "ts": 0.304,
+   "from": "1000",
    "to": "coordinator",
-   "kind": "hello",
-   "summary": "Your device checked in",
+   "kind": "hello_reply",
+   "summary": "Alex's laptop (borrower)",
    "fields": [
     "role",
     "name",
-    "model",
-    "location"
+    "org_kind",
+    "model"
    ],
    "sealed": false
   },
   {
    "type": "bq.node",
-   "ts": 1.7,
-   "node_id": "4127739015582203311",
+   "ts": 0.304,
+   "node_id": "1000",
    "role": "borrower",
-   "name": "Your device",
+   "name": "Alex's laptop",
    "org_kind": "Borrower device",
    "model": null,
    "location": "Palo Alto, CA"
   },
   {
    "type": "bq.msg",
-   "ts": 2.0,
-   "from": "coordinator",
-   "to": "2281946650317784402",
-   "kind": "hello",
-   "summary": "Hello, Cardinal Bank: what role do you play?",
-   "fields": [
-    "role_query"
-   ],
-   "sealed": false
-  },
-  {
-   "type": "bq.msg",
-   "ts": 2.15,
-   "from": "9360018824471156027",
+   "ts": 0.554,
+   "from": "1001",
    "to": "coordinator",
-   "kind": "hello",
-   "summary": "Sequoia Credit Bureau checked in",
+   "kind": "hello_reply",
+   "summary": "Pacific Credit Bureau (bureau)",
    "fields": [
     "role",
     "name",
-    "model",
-    "location"
+    "org_kind",
+    "model"
    ],
    "sealed": false
   },
   {
    "type": "bq.node",
-   "ts": 2.25,
-   "node_id": "9360018824471156027",
+   "ts": 0.555,
+   "node_id": "1001",
    "role": "bureau",
-   "name": "Sequoia Credit Bureau",
+   "name": "Pacific Credit Bureau",
    "org_kind": "Credit bureau",
    "model": null,
+   "location": "Costa Mesa, CA"
+  },
+  {
+   "type": "bq.msg",
+   "ts": 0.803,
+   "from": "1002",
+   "to": "coordinator",
+   "kind": "hello_reply",
+   "summary": "Cardinal Bank (bank)",
+   "fields": [
+    "role",
+    "name",
+    "org_kind",
+    "model"
+   ],
+   "sealed": false
+  },
+  {
+   "type": "bq.node",
+   "ts": 0.803,
+   "node_id": "1002",
+   "role": "bank",
+   "name": "Cardinal Bank",
+   "org_kind": "Regional bank",
+   "model": "flwrlabs/endeavor-1.0",
    "location": "San Jose, CA"
   },
   {
    "type": "bq.msg",
-   "ts": 2.55,
-   "from": "coordinator",
-   "to": "7719203348852610943",
-   "kind": "hello",
-   "summary": "Hello, Golden Gate Credit Union: what role do you play?",
-   "fields": [
-    "role_query"
-   ],
-   "sealed": false
-  },
-  {
-   "type": "bq.msg",
-   "ts": 2.7,
-   "from": "2281946650317784402",
+   "ts": 1.052,
+   "from": "1003",
    "to": "coordinator",
-   "kind": "hello",
-   "summary": "Cardinal Bank checked in",
+   "kind": "hello_reply",
+   "summary": "Golden Gate Credit Union (bank)",
    "fields": [
     "role",
     "name",
-    "model",
-    "location"
+    "org_kind",
+    "model"
    ],
    "sealed": false
   },
   {
    "type": "bq.node",
-   "ts": 2.8,
-   "node_id": "2281946650317784402",
+   "ts": 1.052,
+   "node_id": "1003",
    "role": "bank",
-   "name": "Cardinal Bank",
-   "org_kind": "Bank",
-   "model": "flwrlabs/endeavor-1.0",
+   "name": "Golden Gate Credit Union",
+   "org_kind": "Credit union",
+   "model": "dedicated/flowerai/Kimi-K2.7-Code-1OUHWL",
    "location": "San Francisco, CA"
   },
   {
    "type": "bq.msg",
-   "ts": 3.1,
-   "from": "coordinator",
-   "to": "5093317702264981150",
-   "kind": "hello",
-   "summary": "Hello, Bay Mortgage Co.: what role do you play?",
-   "fields": [
-    "role_query"
-   ],
-   "sealed": false
-  },
-  {
-   "type": "bq.msg",
-   "ts": 3.25,
-   "from": "7719203348852610943",
+   "ts": 1.306,
+   "from": "1004",
    "to": "coordinator",
-   "kind": "hello",
-   "summary": "Golden Gate Credit Union checked in",
+   "kind": "hello_reply",
+   "summary": "Bay Mortgage Co. (bank)",
    "fields": [
     "role",
     "name",
-    "model",
-    "location"
+    "org_kind",
+    "model"
    ],
    "sealed": false
   },
   {
    "type": "bq.node",
-   "ts": 3.35,
-   "node_id": "7719203348852610943",
+   "ts": 1.306,
+   "node_id": "1004",
    "role": "bank",
-   "name": "Golden Gate Credit Union",
-   "org_kind": "Bank",
-   "model": "Kimi-K2.7",
+   "name": "Bay Mortgage Co.",
+   "org_kind": "Online lender",
+   "model": "dedicated/flowerai/MiniMax-M3-OOLI9o",
    "location": "Oakland, CA"
   },
   {
    "type": "bq.msg",
-   "ts": 3.65,
-   "from": "coordinator",
-   "to": "6648820193375529018",
-   "kind": "hello",
-   "summary": "Hello, Rapid Lending Co.: what role do you play?",
-   "fields": [
-    "role_query"
-   ],
-   "sealed": false
-  },
-  {
-   "type": "bq.msg",
-   "ts": 3.8,
-   "from": "5093317702264981150",
+   "ts": 1.556,
+   "from": "1005",
    "to": "coordinator",
-   "kind": "hello",
-   "summary": "Bay Mortgage Co. checked in",
+   "kind": "hello_reply",
+   "summary": "Rapid Lending Co. (bank)",
    "fields": [
     "role",
     "name",
-    "model",
-    "location"
+    "org_kind",
+    "model"
    ],
    "sealed": false
   },
   {
    "type": "bq.node",
-   "ts": 3.9,
-   "node_id": "5093317702264981150",
-   "role": "bank",
-   "name": "Bay Mortgage Co.",
-   "org_kind": "Bank",
-   "model": "MiniMax-M3",
-   "location": "San Mateo, CA"
-  },
-  {
-   "type": "bq.msg",
-   "ts": 4.35,
-   "from": "6648820193375529018",
-   "to": "coordinator",
-   "kind": "hello",
-   "summary": "Rapid Lending Co. checked in",
-   "fields": [
-    "role",
-    "name",
-    "model",
-    "location"
-   ],
-   "sealed": false
-  },
-  {
-   "type": "bq.node",
-   "ts": 4.45,
-   "node_id": "6648820193375529018",
+   "ts": 1.556,
+   "node_id": "1005",
    "role": "bank",
    "name": "Rapid Lending Co.",
-   "org_kind": "Bank",
-   "model": "Kimi-K2.7",
+   "org_kind": "Non-bank lender",
+   "model": "dedicated/flowerai/Kimi-K2.7-Code-1OUHWL",
    "location": "Las Vegas, NV"
   },
   {
    "type": "bq.stage",
-   "ts": 5.2,
+   "ts": 1.556,
    "stage": "discover",
    "status": "done",
-   "label": "6 SuperNodes online: 1 borrower, 1 bureau, 4 banks"
+   "label": "6 nodes ready"
   },
   {
    "type": "bq.stage",
-   "ts": 5.6,
+   "ts": 1.556,
    "stage": "bands",
    "status": "start",
-   "label": "Asking your device for bands, not numbers"
+   "label": "Borrower device computes bands locally"
   },
   {
    "type": "bq.msg",
-   "ts": 6.0,
+   "ts": 1.556,
    "from": "coordinator",
-   "to": "4127739015582203311",
+   "to": "1000",
    "kind": "bands_request",
-   "summary": "Send loan, LTV and DTI bands for a 30-year fixed",
+   "summary": "Send bands only",
    "fields": [
-    "term_years",
-    "horizon_years"
+    "session"
    ],
    "sealed": false
   },
   {
    "type": "bq.msg",
-   "ts": 8.4,
-   "from": "4127739015582203311",
+   "ts": 1.858,
+   "from": "1000",
    "to": "coordinator",
    "kind": "bands",
-   "summary": "Bands computed on-device; raw profile withheld",
+   "summary": "Loan $650k-$700k, LTV 75.01-80%, DTI 36.01-43%",
    "fields": [
     "loan_band",
     "ltv_band",
     "dti_band",
     "occupancy",
     "term_years",
-    "property_state",
-    "applicant_token"
+    "property_state"
    ],
    "sealed": false
   },
   {
    "type": "bq.bands",
-   "ts": 8.6,
+   "ts": 1.858,
    "bands": {
-    "loan_band": "$650k–$700k",
-    "ltv_band": "75.01–80%",
-    "dti_band": "36–43%",
-    "occupancy": "Primary residence",
+    "loan_band": "$650k-$700k",
+    "ltv_band": "75.01-80%",
+    "dti_band": "36.01-43%",
+    "occupancy": "primary",
     "term_years": 30,
     "property_state": "CA"
    },
    "withheld": [
-    "exact_income",
-    "assets",
     "name",
-    "exact_credit_score",
+    "exact income",
+    "assets",
+    "exact credit score",
+    "monthly debts",
     "employer",
-    "ssn"
+    "down payment"
    ]
   },
   {
    "type": "bq.stage",
-   "ts": 9.0,
+   "ts": 1.859,
    "stage": "bands",
    "status": "done",
-   "label": "6 bands shared, 6 raw fields withheld"
+   "label": "Only bands left the borrower device"
   },
   {
    "type": "bq.stage",
-   "ts": 9.4,
+   "ts": 1.859,
    "stage": "attest",
    "status": "start",
-   "label": "Bureau signs the credit band"
+   "label": "Credit bureau attests the credit band"
   },
   {
    "type": "bq.msg",
-   "ts": 9.8,
+   "ts": 1.859,
    "from": "coordinator",
-   "to": "9360018824471156027",
+   "to": "1001",
    "kind": "attest_request",
-   "summary": "Attest the credit band for a one-time applicant token",
+   "summary": "Attest credit band for consent token",
    "fields": [
-    "applicant_token"
+    "token"
    ],
    "sealed": false
   },
   {
    "type": "bq.msg",
-   "ts": 12.3,
-   "from": "9360018824471156027",
+   "ts": 2.417,
+   "from": "1001",
    "to": "coordinator",
    "kind": "attestation",
-   "summary": "FICO band 740–759, signed; raw score stays at the bureau",
+   "summary": "FICO 740-759 (signed)",
    "fields": [
     "fico_band",
     "sig"
@@ -342,945 +351,701 @@
   },
   {
    "type": "bq.attest",
-   "ts": 12.5,
-   "bureau": "Sequoia Credit Bureau",
-   "fico_band": "740–759",
+   "ts": 2.417,
+   "bureau": "Pacific Credit Bureau",
+   "fico_band": "740-759",
    "signature_ok": true
   },
   {
    "type": "bq.stage",
-   "ts": 12.9,
+   "ts": 2.417,
    "stage": "attest",
    "status": "done",
-   "label": "Credit band verified"
+   "label": "FICO band 740-759 attested"
   },
   {
    "type": "bq.stage",
-   "ts": 13.4,
+   "ts": 2.417,
    "stage": "round1",
    "status": "start",
-   "label": "Round 1: sealed bids from 4 banks"
+   "label": "Round 1: sealed bids"
   },
   {
    "type": "bq.msg",
-   "ts": 13.8,
+   "ts": 2.417,
    "from": "coordinator",
-   "to": "2281946650317784402",
+   "to": "1002",
    "kind": "quote_request",
-   "summary": "Sealed quote request to Cardinal Bank",
+   "summary": "Sealed quote request",
    "fields": [
-    "loan_band",
-    "ltv_band",
-    "dti_band",
-    "occupancy",
-    "term_years",
-    "property_state",
-    "fico_band",
-    "sig"
+    "bands",
+    "attestation"
    ],
    "sealed": true
   },
   {
    "type": "bq.msg",
-   "ts": 14.15,
+   "ts": 2.417,
    "from": "coordinator",
-   "to": "7719203348852610943",
+   "to": "1003",
    "kind": "quote_request",
-   "summary": "Sealed quote request to Golden Gate Credit Union",
+   "summary": "Sealed quote request",
    "fields": [
-    "loan_band",
-    "ltv_band",
-    "dti_band",
-    "occupancy",
-    "term_years",
-    "property_state",
-    "fico_band",
-    "sig"
+    "bands",
+    "attestation"
    ],
    "sealed": true
   },
   {
    "type": "bq.msg",
-   "ts": 14.5,
+   "ts": 2.417,
    "from": "coordinator",
-   "to": "5093317702264981150",
+   "to": "1004",
    "kind": "quote_request",
-   "summary": "Sealed quote request to Bay Mortgage Co.",
+   "summary": "Sealed quote request",
    "fields": [
-    "loan_band",
-    "ltv_band",
-    "dti_band",
-    "occupancy",
-    "term_years",
-    "property_state",
-    "fico_band",
-    "sig"
+    "bands",
+    "attestation"
    ],
    "sealed": true
   },
   {
    "type": "bq.msg",
-   "ts": 14.85,
+   "ts": 2.417,
    "from": "coordinator",
-   "to": "6648820193375529018",
+   "to": "1005",
    "kind": "quote_request",
-   "summary": "Sealed quote request to Rapid Lending Co.",
+   "summary": "Sealed quote request",
    "fields": [
-    "loan_band",
-    "ltv_band",
-    "dti_band",
-    "occupancy",
-    "term_years",
-    "property_state",
-    "fico_band",
-    "sig"
+    "bands",
+    "attestation"
    ],
    "sealed": true
   },
   {
    "type": "bq.msg",
-   "ts": 19.6,
-   "from": "6648820193375529018",
+   "ts": 6.373,
+   "from": "1004",
    "to": "coordinator",
    "kind": "quote",
-   "summary": "Rapid Lending Co. asks for exact income and assets before quoting",
+   "summary": "Sealed quote",
    "fields": [
-    "exact_income",
-    "assets",
-    "rate"
+    "options",
+    "note"
+   ],
+   "sealed": true
+  },
+  {
+   "type": "bq.quote",
+   "ts": 6.373,
+   "bank": "Bay Mortgage Co.",
+   "node_id": "1004",
+   "round": 1,
+   "model": "dedicated/flowerai/MiniMax-M3-OOLI9o",
+   "horizon_years": 7,
+   "rate": 7.0,
+   "points": 1.0,
+   "fees": 1895.0,
+   "monthly_pi": 4490.79,
+   "total_cost": 326116.56,
+   "apr": 7.128,
+   "apr_stated": 7.128,
+   "note": "Bay Mortgage: fast digital closing, priced to win."
+  },
+  {
+   "type": "bq.msg",
+   "ts": 7.123,
+   "from": "1003",
+   "to": "coordinator",
+   "kind": "quote",
+   "summary": "Sealed quote",
+   "fields": [
+    "options",
+    "note"
+   ],
+   "sealed": true
+  },
+  {
+   "type": "bq.quote",
+   "ts": 7.123,
+   "bank": "Golden Gate Credit Union",
+   "node_id": "1003",
+   "round": 1,
+   "model": "dedicated/flowerai/Kimi-K2.7-Code-1OUHWL",
+   "horizon_years": 7,
+   "rate": 6.875,
+   "points": 0.566,
+   "fees": 995.0,
+   "monthly_pi": 4434.27,
+   "total_cost": 316333.85,
+   "apr": 6.946,
+   "apr_stated": 6.946,
+   "note": "Golden Gate CU: member pricing with low fees."
+  },
+  {
+   "type": "bq.msg",
+   "ts": 9.539,
+   "from": "1005",
+   "to": "coordinator",
+   "kind": "quote",
+   "summary": "Sealed quote",
+   "fields": [
+    "options",
+    "note"
    ],
    "sealed": true
   },
   {
    "type": "bq.guard",
-   "ts": 19.9,
+   "ts": 9.539,
    "bank": "Rapid Lending Co.",
-   "node_id": "6648820193375529018",
+   "node_id": "1005",
    "round": 1,
    "violation": "requested_fields",
    "requested": [
-    "exact_income",
-    "assets"
+    "assets",
+    "exact_income"
    ],
-   "detail": "Bands only. Banks may not request exact income or assets. Request dropped and logged to the ledger; bank must quote on bands or withdraw.",
+   "detail": "Rapid Lending Co. requested assets, exact_income. Blocked: banks receive attested bands only.",
    "action": "blocked"
   },
   {
-   "type": "bq.msg",
-   "ts": 22.1,
-   "from": "7719203348852610943",
-   "to": "coordinator",
-   "kind": "quote",
-   "summary": "Sealed quote from Golden Gate Credit Union",
-   "fields": [
-    "rate",
-    "points",
-    "fees",
-    "apr_stated",
-    "note"
-   ],
-   "sealed": true
-  },
-  {
-   "type": "bq.quote",
-   "ts": 22.3,
-   "bank": "Golden Gate Credit Union",
-   "node_id": "7719203348852610943",
-   "round": 1,
-   "model": "Kimi-K2.7",
-   "rate": 6.875,
-   "points": 1.25,
-   "fees": 995,
-   "apr": 7.014,
-   "apr_stated": null,
-   "monthly_pi": 4467.12,
-   "total_cost": 323321,
-   "horizon_years": 7,
-   "note": "Member rate with 1.25 points bought down. Lowest monthly payment we can offer."
-  },
-  {
-   "type": "bq.msg",
-   "ts": 25.7,
-   "from": "2281946650317784402",
-   "to": "coordinator",
-   "kind": "quote",
-   "summary": "Sealed quote from Cardinal Bank",
-   "fields": [
-    "rate",
-    "points",
-    "fees",
-    "apr_stated",
-    "note"
-   ],
-   "sealed": true
-  },
-  {
-   "type": "bq.quote",
-   "ts": 25.9,
-   "bank": "Cardinal Bank",
-   "node_id": "2281946650317784402",
-   "round": 1,
-   "model": "flwrlabs/endeavor-1.0",
-   "rate": 6.99,
-   "points": 0.5,
-   "fees": 1495,
-   "apr": 7.062,
-   "apr_stated": null,
-   "monthly_pi": 4519.49,
-   "total_cost": 324238,
-   "horizon_years": 7,
-   "note": "Relationship pricing for a 740+ band at 80% LTV. Rate lock for 45 days included."
-  },
-  {
-   "type": "bq.msg",
-   "ts": 28.4,
-   "from": "5093317702264981150",
-   "to": "coordinator",
-   "kind": "quote",
-   "summary": "Sealed quote from Bay Mortgage Co.",
-   "fields": [
-    "rate",
-    "points",
-    "fees",
-    "apr_stated",
-    "note"
-   ],
-   "sealed": true
-  },
-  {
-   "type": "bq.quote",
-   "ts": 28.6,
-   "bank": "Bay Mortgage Co.",
-   "node_id": "5093317702264981150",
-   "round": 1,
-   "model": "MiniMax-M3",
-   "rate": 7.0,
-   "points": 0.375,
-   "fees": 1995,
-   "apr": 7.067,
-   "apr_stated": null,
-   "monthly_pi": 4524.06,
-   "total_cost": 324368,
-   "horizon_years": 7,
-   "note": "Straightforward 30-year fixed, small buydown, local underwriting in San Mateo."
-  },
-  {
-   "type": "bq.msg",
-   "ts": 31.8,
-   "from": "6648820193375529018",
-   "to": "coordinator",
-   "kind": "quote",
-   "summary": "Rapid Lending Co. requotes on bands only",
-   "fields": [
-    "rate",
-    "points",
-    "fees",
-    "apr_stated",
-    "note"
-   ],
-   "sealed": true
-  },
-  {
-   "type": "bq.quote",
-   "ts": 32.0,
-   "bank": "Rapid Lending Co.",
-   "node_id": "6648820193375529018",
-   "round": 1,
-   "model": "Kimi-K2.7",
-   "rate": 7.25,
-   "points": 1.5,
-   "fees": 2995,
-   "apr": 7.448,
-   "apr_stated": 6.99,
-   "monthly_pi": 4638.8,
-   "total_cost": 345028,
-   "horizon_years": 7,
-   "note": "Lowest APR in the Bay! Close in 21 days."
-  },
-  {
    "type": "bq.guard",
-   "ts": 32.3,
+   "ts": 9.539,
    "bank": "Rapid Lending Co.",
-   "node_id": "6648820193375529018",
+   "node_id": "1005",
    "round": 1,
    "violation": "apr_mismatch",
    "requested": [],
-   "detail": "Stated APR 6.990% but recomputed APR is 7.448% (difference 0.458%, over the 0.125% tolerance). Quote kept and flagged.",
+   "detail": "stated APR 6.875% vs actual 7.028%",
    "action": "flagged"
   },
   {
+   "type": "bq.quote",
+   "ts": 9.539,
+   "bank": "Rapid Lending Co.",
+   "node_id": "1005",
+   "round": 1,
+   "model": "dedicated/flowerai/Kimi-K2.7-Code-1OUHWL",
+   "horizon_years": 7,
+   "rate": 6.875,
+   "points": 1.095,
+   "fees": 2995.0,
+   "monthly_pi": 4434.27,
+   "total_cost": 321904.6,
+   "apr": 7.028,
+   "apr_stated": 6.875,
+   "note": "Rapid Lending: our lowest advertised rate in the Bay Area!"
+  },
+  {
+   "type": "bq.msg",
+   "ts": 23.825,
+   "from": "1002",
+   "to": "coordinator",
+   "kind": "quote",
+   "summary": "Sealed quote",
+   "fields": [
+    "options",
+    "note"
+   ],
+   "sealed": true
+  },
+  {
+   "type": "bq.quote",
+   "ts": 23.825,
+   "bank": "Cardinal Bank",
+   "node_id": "1002",
+   "round": 1,
+   "model": "flwrlabs/endeavor-1.0",
+   "horizon_years": 7,
+   "rate": 7.0,
+   "points": 0.625,
+   "fees": 1495.0,
+   "monthly_pi": 4490.79,
+   "total_cost": 323185.31,
+   "apr": 7.084,
+   "apr_stated": 7.084,
+   "note": "Cardinal Bank offers a 30-year fixed at 7.000% with 0.62 points and $1,495 lender fees for $650k-$700k loans at"
+  },
+  {
    "type": "bq.stage",
-   "ts": 33.0,
+   "ts": 23.825,
    "stage": "round1",
    "status": "done",
-   "label": "4 sealed bids; 1 request blocked, 1 APR flagged"
+   "label": "4 sealed quotes"
   },
   {
    "type": "bq.stage",
-   "ts": 34.0,
+   "ts": 23.825,
    "stage": "round2",
    "status": "start",
-   "label": "Round 2: each bank hears only the best competing total"
+   "label": "Round 2: best competing total cost only"
   },
   {
    "type": "bq.msg",
-   "ts": 34.4,
+   "ts": 23.825,
    "from": "coordinator",
-   "to": "2281946650317784402",
+   "to": "1002",
    "kind": "counter_request",
-   "summary": "Best competing 7-year total is $323,321. Improve or hold?",
+   "summary": "Best competing total: $316,334",
    "fields": [
-    "best_competing_total_cost",
-    "your_round1_offer"
+    "best_competing_total"
    ],
    "sealed": true
   },
   {
    "type": "bq.msg",
-   "ts": 34.75,
+   "ts": 23.825,
    "from": "coordinator",
-   "to": "7719203348852610943",
+   "to": "1003",
    "kind": "counter_request",
-   "summary": "Best competing 7-year total is $324,238. Improve or hold?",
+   "summary": "Best competing total: $321,905",
    "fields": [
-    "best_competing_total_cost",
-    "your_round1_offer"
+    "best_competing_total"
    ],
    "sealed": true
   },
   {
    "type": "bq.msg",
-   "ts": 35.1,
+   "ts": 23.825,
    "from": "coordinator",
-   "to": "5093317702264981150",
+   "to": "1004",
    "kind": "counter_request",
-   "summary": "Best competing 7-year total is $323,321. Improve or hold?",
+   "summary": "Best competing total: $316,334",
    "fields": [
-    "best_competing_total_cost",
-    "your_round1_offer"
+    "best_competing_total"
    ],
    "sealed": true
   },
   {
    "type": "bq.msg",
-   "ts": 35.45,
+   "ts": 23.825,
    "from": "coordinator",
-   "to": "6648820193375529018",
+   "to": "1005",
    "kind": "counter_request",
-   "summary": "Best competing 7-year total is $323,321. Improve or hold?",
+   "summary": "Best competing total: $316,334",
    "fields": [
-    "best_competing_total_cost",
-    "your_round1_offer"
+    "best_competing_total"
    ],
    "sealed": true
   },
   {
    "type": "bq.msg",
-   "ts": 39.5,
-   "from": "7719203348852610943",
+   "ts": 24.881,
+   "from": "1003",
    "to": "coordinator",
    "kind": "counter",
-   "summary": "Golden Gate Credit Union holds its round-1 offer",
+   "summary": "Sealed counter",
    "fields": [
     "decision",
-    "message"
+    "options"
    ],
    "sealed": true
   },
   {
    "type": "bq.decline",
-   "ts": 39.7,
+   "ts": 24.881,
    "bank": "Golden Gate Credit Union",
    "round": 2,
-   "reason": "at_floor",
-   "message": "We're already at our floor. Holding at 6.875% with 1.25 points."
+   "reason": "held price",
+   "message": "Our member pricing is already at its floor."
   },
   {
    "type": "bq.msg",
-   "ts": 43.2,
-   "from": "5093317702264981150",
+   "ts": 25.382,
+   "from": "1005",
    "to": "coordinator",
    "kind": "counter",
-   "summary": "Bay Mortgage Co. sends a sealed counteroffer",
-   "fields": [
-    "rate",
-    "points",
-    "fees",
-    "apr_stated",
-    "note"
-   ],
-   "sealed": true
-  },
-  {
-   "type": "bq.quote",
-   "ts": 43.4,
-   "bank": "Bay Mortgage Co.",
-   "node_id": "5093317702264981150",
-   "round": 2,
-   "model": "MiniMax-M3",
-   "rate": 7.0,
-   "points": 0.0,
-   "fees": 1495,
-   "apr": 7.022,
-   "apr_stated": null,
-   "monthly_pi": 4524.06,
-   "total_cost": 321318,
-   "horizon_years": 7,
-   "note": "Dropped the points and $500 of fees to win this one."
-  },
-  {
-   "type": "bq.improve",
-   "ts": 43.6,
-   "bank": "Bay Mortgage Co.",
-   "from_total": 324368,
-   "to_total": 321318,
-   "delta": 3050,
-   "message": "Dropped the 0.375 points and trimmed fees by $500."
-  },
-  {
-   "type": "bq.msg",
-   "ts": 46.9,
-   "from": "2281946650317784402",
-   "to": "coordinator",
-   "kind": "counter",
-   "summary": "Cardinal Bank sends a sealed counteroffer",
-   "fields": [
-    "rate",
-    "points",
-    "fees",
-    "apr_stated",
-    "note"
-   ],
-   "sealed": true
-  },
-  {
-   "type": "bq.quote",
-   "ts": 47.1,
-   "bank": "Cardinal Bank",
-   "node_id": "2281946650317784402",
-   "round": 2,
-   "model": "flwrlabs/endeavor-1.0",
-   "rate": 6.99,
-   "points": 0.375,
-   "fees": 1295,
-   "apr": 7.046,
-   "apr_stated": null,
-   "monthly_pi": 4519.49,
-   "total_cost": 323188,
-   "horizon_years": 7,
-   "note": "Trimmed points and fees; rate is at our floor."
-  },
-  {
-   "type": "bq.improve",
-   "ts": 47.3,
-   "bank": "Cardinal Bank",
-   "from_total": 324238,
-   "to_total": 323188,
-   "delta": 1050,
-   "message": "Shaved 0.125 points and $200 in fees. Can't go lower on rate."
-  },
-  {
-   "type": "bq.msg",
-   "ts": 50.6,
-   "from": "6648820193375529018",
-   "to": "coordinator",
-   "kind": "counter",
-   "summary": "Rapid Lending Co. declines to improve",
+   "summary": "Sealed counter",
    "fields": [
     "decision",
-    "message"
+    "options"
+   ],
+   "sealed": true
+  },
+  {
+   "type": "bq.guard",
+   "ts": 25.382,
+   "bank": "Rapid Lending Co.",
+   "node_id": "1005",
+   "round": 2,
+   "violation": "requested_fields",
+   "requested": [
+    "assets",
+    "exact_income"
+   ],
+   "detail": "Rapid Lending Co. requested assets, exact_income. Blocked: banks receive attested bands only.",
+   "action": "blocked"
+  },
+  {
+   "type": "bq.decline",
+   "ts": 25.382,
+   "bank": "Rapid Lending Co.",
+   "round": 2,
+   "reason": "held price",
+   "message": "Holding our round-1 price."
+  },
+  {
+   "type": "bq.msg",
+   "ts": 28.074,
+   "from": "1004",
+   "to": "coordinator",
+   "kind": "counter",
+   "summary": "Sealed counter",
+   "fields": [
+    "decision",
+    "options"
+   ],
+   "sealed": true
+  },
+  {
+   "type": "bq.improve",
+   "ts": 28.074,
+   "bank": "Bay Mortgage Co.",
+   "from_total": 326116.56,
+   "to_total": 312865.57,
+   "delta": 13250.99,
+   "message": "Locking in our floor rate to guarantee you the lowest total cost \u2014 $312,866, well below any competitor."
+  },
+  {
+   "type": "bq.quote",
+   "ts": 28.074,
+   "bank": "Bay Mortgage Co.",
+   "node_id": "1004",
+   "round": 2,
+   "model": "dedicated/flowerai/MiniMax-M3-OOLI9o",
+   "horizon_years": 7,
+   "rate": 6.75,
+   "points": 0.8,
+   "fees": 1895.0,
+   "monthly_pi": 4378.04,
+   "total_cost": 312865.57,
+   "apr": 6.856,
+   "apr_stated": 6.856,
+   "note": "Locking in our floor rate to guarantee you the lowest total cost \u2014 $312,866, well below any competitor."
+  },
+  {
+   "type": "bq.msg",
+   "ts": 61.245,
+   "from": "1002",
+   "to": "coordinator",
+   "kind": "counter",
+   "summary": "Sealed counter",
+   "fields": [
+    "decision",
+    "options"
    ],
    "sealed": true
   },
   {
    "type": "bq.decline",
-   "ts": 50.8,
-   "bank": "Rapid Lending Co.",
+   "ts": 61.245,
+   "bank": "Cardinal Bank",
    "round": 2,
-   "reason": "no_improvement",
-   "message": "Our offer stands. Call us to discuss your full financial picture."
+   "reason": "held price",
+   "message": "We're unable to match the competing offer at this time without compromising our pricing standards."
   },
   {
    "type": "bq.stage",
-   "ts": 51.5,
+   "ts": 61.245,
    "stage": "round2",
    "status": "done",
-   "label": "2 banks improved, 2 held"
-  },
-  {
-   "type": "bq.stage",
-   "ts": 52.2,
-   "stage": "verdict",
-   "status": "start",
-   "label": "Ranking by 7-year total cost"
+   "label": "Negotiation closed"
   },
   {
    "type": "bq.market",
-   "ts": 52.6,
+   "ts": 62.514,
    "pmms_30y": 7.03,
-   "as_of": "2026-09-24",
+   "as_of": "September 24, 2026",
    "source": "https://www.freddiemac.com/pmms"
   },
   {
+   "type": "bq.stage",
+   "ts": 62.514,
+   "stage": "verdict",
+   "status": "start",
+   "label": "Ranking by total cost over your horizon"
+  },
+  {
    "type": "bq.verdict",
-   "ts": 53.0,
+   "ts": 62.515,
    "ranking": [
     {
      "bank": "Bay Mortgage Co.",
-     "rate": 7.0,
-     "points": 0.0,
-     "fees": 1495,
-     "apr": 7.022,
-     "total_cost": 321318,
-     "monthly_pi": 4524.06,
-     "flags": [
-      "improved_round2"
-     ]
-    },
-    {
-     "bank": "Cardinal Bank",
-     "rate": 6.99,
-     "points": 0.375,
-     "fees": 1295,
-     "apr": 7.046,
-     "total_cost": 323188,
-     "monthly_pi": 4519.49,
-     "flags": [
-      "improved_round2"
-     ]
+     "model": "dedicated/flowerai/MiniMax-M3-OOLI9o",
+     "flags": [],
+     "rate": 6.75,
+     "points": 0.8,
+     "fees": 1895.0,
+     "apr": 6.856,
+     "total_cost": 312865.57,
+     "monthly_pi": 4378.04
     },
     {
      "bank": "Golden Gate Credit Union",
+     "model": "dedicated/flowerai/Kimi-K2.7-Code-1OUHWL",
+     "flags": [],
      "rate": 6.875,
-     "points": 1.25,
-     "fees": 995,
-     "apr": 7.014,
-     "total_cost": 323321,
-     "monthly_pi": 4467.12,
-     "flags": [
-      "at_floor"
-     ]
+     "points": 0.566,
+     "fees": 995.0,
+     "apr": 6.946,
+     "total_cost": 316333.85,
+     "monthly_pi": 4434.27
+    },
+    {
+     "bank": "Cardinal Bank",
+     "model": "flwrlabs/endeavor-1.0",
+     "flags": [],
+     "rate": 7.0,
+     "points": 0.625,
+     "fees": 1495.0,
+     "apr": 7.084,
+     "total_cost": 323185.31,
+     "monthly_pi": 4490.79
     },
     {
      "bank": "Rapid Lending Co.",
-     "rate": 7.25,
-     "points": 1.5,
-     "fees": 2995,
-     "apr": 7.448,
-     "total_cost": 345028,
-     "monthly_pi": 4638.8,
+     "model": "dedicated/flowerai/Kimi-K2.7-Code-1OUHWL",
      "flags": [
-      "apr_mismatch",
-      "requested_exact_income"
-     ]
+      "requested raw data (blocked)",
+      "misleading APR"
+     ],
+     "rate": 6.875,
+     "points": 1.095,
+     "fees": 2995.0,
+     "apr": 7.028,
+     "total_cost": 321904.6,
+     "monthly_pi": 4434.27
     }
    ],
    "winner": "Bay Mortgage Co.",
-   "savings_vs_single_quote": 2920,
-   "savings_vs_worst": 23710,
+   "savings_vs_single_quote": 9679.38,
+   "savings_vs_worst": 10319.74,
    "horizon_years": 7
   },
   {
-   "type": "response.output_text.delta",
-   "ts": 54.0,
-   "delta": "**Bay Mortgage Co. "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 54.47,
-   "delta": "wins on 7-year cost.** "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 54.94,
-   "delta": "At 7.000% with no "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 55.41,
-   "delta": "points and $1,495 "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 55.88,
-   "delta": "in fees, you'd pay "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 56.35,
-   "delta": "$321,318 over the "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 56.82,
-   "delta": "7 years you plan to "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 57.29,
-   "delta": "stay. That's $2,920 "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 57.76,
-   "delta": "less than Cardinal "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 58.24,
-   "delta": "Bank's first quote, "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 58.71,
-   "delta": "and Bay only got there "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 59.18,
-   "delta": "because it had to "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 59.65,
-   "delta": "compete in round 2.\n\n"
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 60.12,
-   "delta": "Golden Gate has the "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 60.59,
-   "delta": "lowest rate (6.875%), "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 61.06,
-   "delta": "but it gets there "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 61.53,
-   "delta": "by charging 1.25 points "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 62.0,
-   "delta": "up front, about $8,500. "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 62.47,
-   "delta": "You'd need to keep "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 62.94,
-   "delta": "the loan for roughly "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 63.41,
-   "delta": "12 years for the lower "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 63.88,
-   "delta": "payment to earn that "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 64.35,
-   "delta": "back. At 7 years you "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 64.82,
-   "delta": "come out behind.\n\n"
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 65.29,
-   "delta": "Cardinal Bank is a "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 65.76,
-   "delta": "close second at $323,188, "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 66.24,
-   "delta": "just $1,870 behind. "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 66.71,
-   "delta": "Pick Cardinal if you "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 67.18,
-   "delta": "value its 45-day rate "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 67.65,
-   "delta": "lock.\n\nAvoid Rapid "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 68.12,
-   "delta": "Lending Co. It asked "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 68.59,
-   "delta": "for your exact income "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 69.06,
-   "delta": "and assets, which "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 69.53,
-   "delta": "the guard blocked. "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 70.0,
-   "delta": "It also advertised "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 70.47,
-   "delta": "a 6.99% APR, but the "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 70.94,
-   "delta": "true APR on its terms "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 71.41,
-   "delta": "is 7.448%. Over 7 "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 71.88,
-   "delta": "years it costs $23,710 "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 72.35,
-   "delta": "more than Bay.\n\nFor "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 72.82,
-   "delta": "context, the market "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 73.29,
-   "delta": "average for a 30-year "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 73.76,
-   "delta": "fixed is 7.03% (Freddie "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 74.24,
-   "delta": "Mac, week of Sep 24). "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 74.71,
-   "delta": "All three honest offers "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 75.18,
-   "delta": "came in at or below "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 75.65,
-   "delta": "it. None of the banks "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 76.12,
-   "delta": "saw your income, assets, "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 76.59,
-   "delta": "name or exact score, "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 77.06,
-   "delta": "and none of them saw "
-  },
-  {
-   "type": "response.output_text.delta",
-   "ts": 77.53,
-   "delta": "each other's bids."
+   "type": "bq.stage",
+   "ts": 62.515,
+   "stage": "verdict",
+   "status": "done",
+   "label": "Best: Bay Mortgage Co."
   },
   {
    "type": "bq.ledger",
-   "ts": 78.4,
    "parties": [
     {
-     "party": "You (borrower device)",
-     "role": "borrower",
-     "learned": [
-      "Every quote and counteroffer",
-      "Which bank tried to over-collect",
-      "The true APR of every offer"
-     ],
-     "never": [
-      "Bank rate sheets",
-      "Bank floors and margins"
-     ]
-    },
-    {
-     "party": "Sequoia Credit Bureau",
-     "role": "bureau",
-     "learned": [
-      "One-time applicant token"
-     ],
-     "never": [
-      "Loan amount or property",
-      "Which banks are bidding",
-      "Any quote"
-     ]
-    },
-    {
-     "party": "Coordinator (SuperGrid)",
+     "party": "BlindQuote Coordinator",
      "role": "coordinator",
      "learned": [
-      "Loan band",
-      "LTV band",
-      "DTI band",
-      "Occupancy",
-      "Credit band (attested)",
-      "All quotes"
+      "loan $650k-$700k",
+      "LTV 75.01-80%",
+      "DTI 36.01-43%",
+      "FICO band 740-759"
      ],
      "never": [
-      "Exact income",
-      "Assets",
-      "Name",
-      "Exact credit score",
-      "Bank rate sheets and floors"
+      "name",
+      "exact income",
+      "assets",
+      "exact credit score",
+      "monthly debts",
+      "employer",
+      "bank rate sheets",
+      "bank floors & margins"
+     ]
+    },
+    {
+     "party": "Alex's laptop",
+     "role": "borrower",
+     "learned": [
+      "every quote and the final ranking"
+     ],
+     "never": [
+      "bank rate sheets",
+      "bank floors & margins",
+      "exact credit score (bureau-held)"
+     ]
+    },
+    {
+     "party": "Pacific Credit Bureau",
+     "role": "bureau",
+     "learned": [
+      "a one-time consent token"
+     ],
+     "never": [
+      "loan amount",
+      "property",
+      "which banks are bidding",
+      "any quotes"
      ]
     },
     {
      "party": "Cardinal Bank",
      "role": "bank",
      "learned": [
-      "Loan band",
-      "LTV band",
-      "DTI band",
-      "Occupancy",
-      "Credit band (attested)",
-      "Best competing total cost (round 2)"
+      "loan $650k-$700k",
+      "LTV 75.01-80%",
+      "DTI 36.01-43%",
+      "FICO band 740-759 (attested)",
+      "best competing total cost (no bank named)"
      ],
      "never": [
-      "Exact income",
-      "Assets",
-      "Name",
-      "Exact credit score",
-      "Other banks' names",
-      "Other banks' quotes"
+      "name",
+      "exact income",
+      "assets",
+      "exact credit score",
+      "monthly debts",
+      "employer",
+      "other banks' identities",
+      "other banks' quotes"
      ]
     },
     {
      "party": "Golden Gate Credit Union",
      "role": "bank",
      "learned": [
-      "Loan band",
-      "LTV band",
-      "DTI band",
-      "Occupancy",
-      "Credit band (attested)",
-      "Best competing total cost (round 2)"
+      "loan $650k-$700k",
+      "LTV 75.01-80%",
+      "DTI 36.01-43%",
+      "FICO band 740-759 (attested)",
+      "best competing total cost (no bank named)"
      ],
      "never": [
-      "Exact income",
-      "Assets",
-      "Name",
-      "Exact credit score",
-      "Other banks' names",
-      "Other banks' quotes"
+      "name",
+      "exact income",
+      "assets",
+      "exact credit score",
+      "monthly debts",
+      "employer",
+      "other banks' identities",
+      "other banks' quotes"
      ]
     },
     {
      "party": "Bay Mortgage Co.",
      "role": "bank",
      "learned": [
-      "Loan band",
-      "LTV band",
-      "DTI band",
-      "Occupancy",
-      "Credit band (attested)",
-      "Best competing total cost (round 2)"
+      "loan $650k-$700k",
+      "LTV 75.01-80%",
+      "DTI 36.01-43%",
+      "FICO band 740-759 (attested)",
+      "best competing total cost (no bank named)"
      ],
      "never": [
-      "Exact income",
-      "Assets",
-      "Name",
-      "Exact credit score",
-      "Other banks' names",
-      "Other banks' quotes"
+      "name",
+      "exact income",
+      "assets",
+      "exact credit score",
+      "monthly debts",
+      "employer",
+      "other banks' identities",
+      "other banks' quotes"
      ]
     },
     {
      "party": "Rapid Lending Co.",
      "role": "bank",
      "learned": [
-      "Loan band",
-      "LTV band",
-      "DTI band",
-      "Occupancy",
-      "Credit band (attested)",
-      "Best competing total cost (round 2)",
-      "Its request for income and assets was blocked"
+      "loan $650k-$700k",
+      "LTV 75.01-80%",
+      "DTI 36.01-43%",
+      "FICO band 740-759 (attested)",
+      "request for assets, exact_income was refused",
+      "best competing total cost (no bank named)"
      ],
      "never": [
-      "Exact income",
-      "Assets",
-      "Name",
-      "Exact credit score",
-      "Other banks' names",
-      "Other banks' quotes"
+      "name",
+      "exact income",
+      "assets",
+      "exact credit score",
+      "monthly debts",
+      "employer",
+      "other banks' identities",
+      "other banks' quotes"
      ]
     }
-   ]
+   ],
+   "ts": 62.515
+  },
+  {
+   "type": "response.output_text.delta",
+   "delta": "### BlindQuote result\n\n| # | Lender | Rate | Points | Fees | APR | Total cost | Flags |\n|---|---|---|---|---|---|---|---|\n| 1 | Bay Mortgage Co. | 6.750% | 0.80 | $1,895 | 6.856% | $312,866 | - |\n| 2 | Golden Gate Credit Union | 6.875% | 0.57 | $995 | 6.946% | $316,334 | - |\n| 3 | Cardinal Bank | 7.000% | 0.62 | $1,495 | 7.084% | $323,185 | - |\n| 4 | Rapid Lending Co. | 6.875% | 1.09 | $2,995 | 7.028% | $321,905 | requested raw data (blocked), misleading APR |\n\n"
+  },
+  {
+   "content_index": 0,
+   "delta": "\n\nBay Mortgage Co. wins because its total cost over the 7-year horizon is $312,865.57, the lowest of the four quotes. It combines a 6.75% rate with 0.8 points and $1,895 fees, showing that a lower rate can matter more than lower upfront points. Golden Gate Credit Union has lower points and fees, but its higher 6.875% rate leads to a higher total cost of $316,333.85. The market 30-year average is 7.03% as of September 24, 2026, so Bay\u2019s winning rate is below average. Rapid Lending Co. was flagged for requesting raw data, which was blocked, and for a misleading APR, and it costs $321,904.60 overall.",
+   "item_id": "msg_tmp_0vacfykrf7ve",
+   "logprobs": [],
+   "output_index": 0,
+   "sequence_number": 5,
+   "type": "response.output_text.delta"
+  },
+  {
+   "response": {
+    "id": "resp_02495e0b053547ec8ffee926d13efbc6",
+    "created_at": 1790714918.0,
+    "error": null,
+    "incomplete_details": null,
+    "instructions": null,
+    "metadata": {},
+    "model": "flwrlabs/endeavor-1.0",
+    "object": "response",
+    "output": [
+     {
+      "id": "msg_tmp_0vacfykrf7ve",
+      "content": [
+       {
+        "annotations": [],
+        "text": "\n\nBay Mortgage Co. wins because its total cost over the 7-year horizon is $312,865.57, the lowest of the four quotes. It combines a 6.75% rate with 0.8 points and $1,895 fees, showing that a lower rate can matter more than lower upfront points. Golden Gate Credit Union has lower points and fees, but its higher 6.875% rate leads to a higher total cost of $316,333.85. The market 30-year average is 7.03% as of September 24, 2026, so Bay\u2019s winning rate is below average. Rapid Lending Co. was flagged for requesting raw data, which was blocked, and for a misleading APR, and it costs $321,904.60 overall.",
+        "type": "output_text"
+       }
+      ],
+      "role": "assistant",
+      "status": "completed",
+      "type": "message"
+     }
+    ],
+    "parallel_tool_calls": true,
+    "temperature": 1.0,
+    "tool_choice": "auto",
+    "tools": [],
+    "top_p": 1.0,
+    "background": false,
+    "completed_at": 1790714962.0,
+    "max_output_tokens": 1500,
+    "max_tool_calls": null,
+    "previous_response_id": null,
+    "prompt_cache_key": null,
+    "prompt_cache_options": null,
+    "reasoning": {
+     "effort": "xhigh"
+    },
+    "safety_identifier": null,
+    "service_tier": "auto",
+    "status": "completed",
+    "text": {
+     "format": {
+      "type": "text"
+     }
+    },
+    "top_logprobs": 0,
+    "truncation": "disabled",
+    "presence_penalty": 0,
+    "frequency_penalty": 0,
+    "store": false
+   },
+   "sequence_number": 9,
+   "type": "response.completed"
   },
   {
    "type": "response.completed",
-   "ts": 78.8
-  },
-  {
-   "type": "bq.stage",
-   "ts": 79.0,
-   "stage": "verdict",
-   "status": "done",
-   "label": "Verdict ready"
+   "response": {
+    "output": []
+   }
   },
   {
    "type": "bq.done",
-   "ts": 79.2,
-   "elapsed_s": 79.2
+   "ts": 107.358,
+   "elapsed_s": 107.358
   }
  ]
 }
