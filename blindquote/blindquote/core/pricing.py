@@ -170,7 +170,8 @@ class Offer:
         return {k: round(v, 3) if isinstance(v, float) else v for k, v in asdict(self).items()}
 
 
-def make_offer(principal: float, rate: float, points: float, fees: float, horizon: int, term: int = 30) -> Offer:
+def make_offer(principal: float, rate: float, points: float, fees: float, horizon: int | None, term: int = 30) -> Offer:
+    """Price one option. ``horizon=None`` (a bank, which never learns it) costs the full term."""
     rate = round(rate * 8) / 8  # rates move in 1/8ths
     points = round(max(points, 0.0), 3)
     return Offer(
@@ -178,7 +179,7 @@ def make_offer(principal: float, rate: float, points: float, fees: float, horizo
         points=points,
         fees=float(fees),
         monthly_pi=round(monthly_payment(principal, rate, term), 2),
-        total_cost=round(total_cost(principal, rate, points, fees, horizon, term), 2),
+        total_cost=round(total_cost(principal, rate, points, fees, horizon or term, term), 2),
         apr=apr(principal, rate, points, fees, term),
     )
 
@@ -200,10 +201,15 @@ def price_from_sheet(sheet: dict[str, Any], bands: dict[str, Any], fico: str, ex
         return {"eligible": False, "reason": f"max LTV {ov['max_ltv_band']}", "options": []}
 
     principal = float(bands["loan_mid"])
-    horizon = int(bands["horizon_years"])
+    # Banks never see the borrower's stay horizon; only the coordinator ranks by it.
+    horizon = int(bands["horizon_years"]) if bands.get("horizon_years") else None
     term = int(bands.get("term_years", 30))
     margin = max(sheet["margin_pts"] - max(extra_discount_pts, 0.0), sheet["floor_pts"])
     cost_pts = llpa_points(fico, bands["ltv_band"]) + margin
+    if bands.get("derogatory"):  # bankruptcy or late payments in 7 years (a yes/no flag only)
+        cost_pts += sheet.get("derogatory_pts", 0.5)
+    if bands.get("fico_self_reported"):  # bureau had no file: price the unverified risk
+        cost_pts += sheet.get("unverified_pts", 0.375)
     for adj in sheet.get("appetite", []):
         if principal >= adj.get("min_loan", 0):
             cost_pts += adj.get("pts", 0.0)
