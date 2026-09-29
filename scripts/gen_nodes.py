@@ -37,6 +37,8 @@ PROFILE = {
 CREDIT_FILES = {
     "consents": {
         "consent_7f3a9c2e41": {"subject": "Alex Rivera", "score": 752, "tradelines": 11, "inquiries_12m": 1},
+        # flower-finance sample applicant (frontend SAMPLE_FORM) - consent granted in the demo
+        "consent_demo_maya": {"subject": "Maya R. Okafor", "score": 752, "tradelines": 9, "inquiries_12m": 0},
     }
 }
 
