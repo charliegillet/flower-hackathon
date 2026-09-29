@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BlindQuote</title>
+  <meta name="description" content="Shop every lender without becoming a lead. Sealed, negotiated mortgage quotes over Flower SuperGrid.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%231D2B4F'/%3E%3Cpath d='M8 12h16v10H8z M8 12l8 6 8-6' fill='none' stroke='%23EEF1EC' stroke-width='2'/%3E%3C/svg%3E">
+</head>
+<body>
+  <header class="masthead">
+    <div class="brand">
+      <h1 class="wordmark">BlindQuote</h1>
+      <p class="tagline">Shop every lender without becoming a lead.</p>
+    </div>
+
+    <form class="ask" id="ask" autocomplete="off">
+      <label class="sr-only" for="prompt">What are you shopping for?</label>
+      <input id="prompt" class="ask-input" type="text"
+        value="Find me the best 30-year fixed for the $850k home — I plan to stay about 7 years.">
+      <div class="ask-controls">
+        <fieldset class="modes" id="modes" aria-label="Run mode">
+          <label class="mode"><input type="radio" name="mode" value="replay" checked><span>Replay</span></label>
+          <label class="mode"><input type="radio" name="mode" value="sim" disabled><span>Simulation</span></label>
+          <label class="mode"><input type="radio" name="mode" value="local" disabled><span>Local Flower</span></label>
+          <label class="mode"><input type="radio" name="mode" value="supergrid" disabled><span>SuperGrid</span></label>
+        </fieldset>
+        <div class="speed" id="speed" role="group" aria-label="Replay speed">
+          <button type="button" data-speed="1" aria-pressed="true">1×</button>
+          <button type="button" data-speed="2" aria-pressed="false">2×</button>
+          <button type="button" data-speed="4" aria-pressed="false">4×</button>
+          <button type="button" id="skip" title="Play the rest of the recording instantly">Skip to end</button>
+        </div>
+        <button class="btn btn-run" id="run" type="submit">Get sealed quotes</button>
+        <button class="btn btn-quiet" id="reset" type="button">Reset</button>
+      </div>
+      <p class="status-line" id="status" role="status" aria-live="polite">Checking which modes the server offers…</p>
+    </form>
+  </header>
+
+  <nav class="stages" aria-label="Run progress">
+    <ol id="stages">
+      <li data-stage="discover"><span class="stage-num">1</span><span class="stage-name">Discover</span><span class="stage-label">Find the SuperNodes</span></li>
+      <li data-stage="bands"><span class="stage-num">2</span><span class="stage-name">Bands</span><span class="stage-label">Your device shares ranges</span></li>
+      <li data-stage="attest"><span class="stage-num">3</span><span class="stage-name">Attest</span><span class="stage-label">Bureau signs your credit band</span></li>
+      <li data-stage="round1"><span class="stage-num">4</span><span class="stage-name">Round 1</span><span class="stage-label">Sealed bids</span></li>
+      <li data-stage="round2"><span class="stage-num">5</span><span class="stage-name">Round 2</span><span class="stage-label">Banks may improve</span></li>
+      <li data-stage="verdict"><span class="stage-num">6</span><span class="stage-name">Verdict</span><span class="stage-label">Ranked by total cost</span></li>
+    </ol>
+  </nav>
+
+  <main class="floor">
+    <section class="panel side" aria-labelledby="side-h">
+      <h2 id="side-h">Your side</h2>
+      <p class="panel-note">Your raw profile never leaves your device. Only ranges do.</p>
+
+      <h3 class="sub">Stays on your device</h3>
+      <ul class="locked" id="locked"></ul>
+
+      <h3 class="sub">Shared with banks</h3>
+      <dl class="bands" id="bands">
+        <div class="empty">Nothing shared yet.</div>
+      </dl>
+
+      <div class="attest" id="attest" hidden>
+        <div class="attest-seal" aria-hidden="true">
+          <svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="21"/><path d="M14 24.5l7 7 13-14"/></svg>
+        </div>
+        <div>
+          <div class="attest-band" id="attest-band"></div>
+          <div class="attest-by" id="attest-by"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel net" aria-labelledby="net-h">
+      <h2 id="net-h">The grid</h2>
+      <div class="net-stage">
+        <svg id="network" viewBox="0 0 660 540" role="img" aria-label="Coordinator and SuperNodes"></svg>
+        <div class="guard-alert" id="guard-alert" hidden role="alert">
+          <div class="guard-stamp">Blocked</div>
+          <div class="guard-body">
+            <div class="guard-title" id="guard-title"></div>
+            <div class="guard-detail" id="guard-detail"></div>
+          </div>
+        </div>
+      </div>
+      <ol class="wire" id="wire" aria-label="Latest grid messages"></ol>
+    </section>
+
+    <section class="panel bids" aria-labelledby="bids-h">
+      <h2 id="bids-h">Sealed bids</h2>
+      <p class="panel-note">No bank sees another bank's bid. You see all of them.</p>
+      <div class="bid-grid" id="bid-grid"></div>
+    </section>
+  </main>
+
+  <section class="verdict-row" id="verdict-row">
+    <section class="panel verdict" aria-labelledby="verdict-h">
+      <h2 id="verdict-h">Verdict</h2>
+      <div class="verdict-body" id="verdict">
+        <p class="empty">The ranking appears once both rounds close.</p>
+      </div>
+      <div class="narrative" id="narrative" aria-live="polite"></div>
+    </section>
+
+    <section class="panel ledger" aria-labelledby="ledger-h">
+      <h2 id="ledger-h">Disclosure ledger</h2>
+      <p class="panel-note">What each party learned during this run, and what it never saw.</p>
+      <div class="ledger-grid" id="ledger">
+        <p class="empty">The ledger is written when the run ends.</p>
+      </div>
+    </section>
+  </section>
+
+  <aside class="log" id="log">
+    <button class="log-toggle" id="log-toggle" type="button" aria-expanded="false" aria-controls="log-body">
+      <span>Raw event stream</span><span class="log-count" id="log-count">0 events</span>
+    </button>
+    <div class="log-body" id="log-body" hidden>
+      <ol id="log-list"></ol>
+    </div>
+  </aside>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
