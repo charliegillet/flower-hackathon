@@ -102,14 +102,8 @@ export const ALLOWED_BAND_KEYS = [
 
 const n = (v) => (v === '' || v == null || Number.isNaN(Number(v)) ? 0 : Number(v));
 const money = (v) => `$${Math.round(v).toLocaleString()}`;
-const moneyK = (v) => (v >= 1_000_000 ? `$${(v / 1_000_000).toFixed(1)}M` : `$${Math.round(v / 1000)}k`);
+const moneyK = (v) => (v >= 1_000_000 ? `$${+(v / 1_000_000).toFixed(2)}M` : `$${Math.round(v / 1000)}k`);
 
-function pctBand(ratio, step = 5) {
-  if (!Number.isFinite(ratio) || ratio <= 0) return null;
-  const pct = ratio * 100;
-  const lo = Math.floor(pct / step) * step;
-  return { lo, hi: lo + step, label: `${lo}–${lo + step}%` };
-}
 function moneyBand(value, step) {
   if (!Number.isFinite(value) || value <= 0) return null;
   const lo = Math.floor(value / step) * step;
@@ -118,16 +112,20 @@ function moneyBand(value, step) {
 // Loan-to-value on the Fannie Mae LLPA grid edges (upper edge inclusive), so the
 // range the user sees is exactly the band banks price from. 80.00% is "75.01–80%".
 const LTV_EDGES = [30, 60, 70, 75, 80, 85, 90, 95];
-function fannieLtvBand(ratio) {
+// Same idea for debt-to-income, on the grid edges 28/36/43/50.
+const DTI_EDGES = [28, 36, 43, 50];
+function edgeBand(ratio, edges) {
   if (!Number.isFinite(ratio) || ratio <= 0) return null;
   const pct = Math.round(ratio * 10000) / 100;
   let lo = 0;
-  for (const hi of LTV_EDGES) {
+  for (const hi of edges) {
     if (pct <= hi) return { label: lo === 0 ? `≤${hi}%` : `${lo + 0.01}–${hi}%` };
     lo = hi;
   }
-  return { label: '>95%' };
+  return { label: `>${edges[edges.length - 1]}%` };
 }
+const fannieLtvBand = (ratio) => edgeBand(ratio, LTV_EDGES);
+const dtiBand = (ratio) => edgeBand(ratio, DTI_EDGES);
 
 function ficoBand(score) {
   if (!score) return null;
@@ -157,7 +155,7 @@ export function computeBands(form) {
   const ltv = n(form.propertyPrice) > 0 ? n(form.amount) / n(form.propertyPrice) : null;
   return {
     token: form._token || null,
-    dtiBand: pctBand(dti)?.label ?? null,
+    dtiBand: dtiBand(dti)?.label ?? null,
     ltvBand: fannieLtvBand(ltv)?.label ?? null,
     assetBand: moneyBand(t.assets, 50_000)?.label ?? null,
     loanBand: moneyBand(n(form.amount), 50_000)?.label ?? null,
