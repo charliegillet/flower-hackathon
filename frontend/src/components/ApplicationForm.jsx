@@ -4,14 +4,13 @@ import { api } from '../api.js';
 const PURPOSES = ['home', 'auto', 'personal', 'business', 'education', 'debt-consolidation', 'other'];
 const EMPLOYMENT = ['employed', 'self-employed', 'unemployed', 'retired', 'student'];
 
-export default function ApplicationForm({ onSubmitted, onError }) {
+export default function ApplicationForm({ user, onSubmitted, onError }) {
+  const p = user.profile || {};
   const [form, setForm] = useState({
-    name: '',
-    email: '',
-    annualIncome: '',
-    employmentStatus: 'employed',
-    monthlyDebt: '',
-    creditScore: '',
+    annualIncome: p.annualIncome ?? '',
+    employmentStatus: p.employmentStatus || 'employed',
+    monthlyDebt: p.monthlyDebt ?? '',
+    creditScore: p.creditScore ?? '',
     amount: '',
     purpose: 'personal',
     termMonths: 36,
@@ -27,8 +26,8 @@ export default function ApplicationForm({ onSubmitted, onError }) {
     try {
       const payload = {
         applicant: {
-          name: form.name,
-          email: form.email,
+          name: user.name,
+          email: user.email,
           annualIncome: Number(form.annualIncome),
           employmentStatus: form.employmentStatus,
           monthlyDebt: Number(form.monthlyDebt || 0),
@@ -51,15 +50,11 @@ export default function ApplicationForm({ onSubmitted, onError }) {
   return (
     <form className="card form" onSubmit={submit}>
       <h2>Loan application</h2>
+      <p className="muted">
+        Applying as {user.name} ({user.email}). Financials are prefilled from your profile — adjust them
+        for this application or update your saved info under "My info".
+      </p>
       <div className="grid">
-        <label>
-          Full name
-          <input required value={form.name} onChange={set('name')} />
-        </label>
-        <label>
-          Email
-          <input required type="email" value={form.email} onChange={set('email')} />
-        </label>
         <label>
           Annual income ($)
           <input required type="number" min="0" value={form.annualIncome} onChange={set('annualIncome')} />
@@ -87,8 +82,8 @@ export default function ApplicationForm({ onSubmitted, onError }) {
         <label>
           Purpose
           <select value={form.purpose} onChange={set('purpose')}>
-            {PURPOSES.map((p) => (
-              <option key={p}>{p}</option>
+            {PURPOSES.map((p2) => (
+              <option key={p2}>{p2}</option>
             ))}
           </select>
         </label>

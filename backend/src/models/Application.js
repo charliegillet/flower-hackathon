@@ -24,6 +24,7 @@ const evaluationSchema = new mongoose.Schema(
 
 const applicationSchema = new mongoose.Schema(
   {
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     applicant: {
       name: { type: String, required: true },
       email: { type: String, required: true },
@@ -51,6 +52,13 @@ const applicationSchema = new mongoose.Schema(
       default: 'submitted',
     },
     evaluation: evaluationSchema,
+    // Final human decision by a bank user, after the agents have negotiated.
+    bankDecision: {
+      decision: { type: String, enum: ['approved', 'denied'] },
+      note: String,
+      decidedBy: String,
+      decidedAt: Date,
+    },
     conversation: [messageSchema],
   },
   { timestamps: true },

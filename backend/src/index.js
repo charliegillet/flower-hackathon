@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import { connectDb } from './db.js';
 import applicationsRouter from './routes/applications.js';
+import authRouter from './routes/auth.js';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -11,6 +12,7 @@ app.use(cors());
 app.use(express.json());
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
+app.use('/api/auth', authRouter);
 app.use('/api/applications', applicationsRouter);
 
 connectDb()
