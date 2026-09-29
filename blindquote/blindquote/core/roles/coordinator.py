@@ -244,7 +244,8 @@ class Coordinator:
         shown = {k: bands[k] for k in ("loan_band", "ltv_band", "dti_band", "occupancy", "term_years") if k in bands}
         ev.emit("bq.bands", bands=shown, withheld=["name", "exact income", "assets", "exact credit score",
                                                    "monthly debts", "employer", "address", "stay horizon"])
-        for item in (f"loan {bands['loan_band']}", f"LTV {bands['ltv_band']}", f"DTI {bands['dti_band']}"):
+        for item in (f"loan {bands['loan_band']}", f"LTV {bands['ltv_band']}", f"DTI {bands['dti_band']}",
+                     f"stay horizon {horizon} years (for ranking only, never forwarded)"):
             self.ledger.learn("BlindQuote Coordinator", item)
         self.ledger.party("Your device", "borrower")
         self.ledger.learn("Your device", "every quote and the final ranking")
