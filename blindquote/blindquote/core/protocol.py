@@ -88,8 +88,15 @@ def check(msg: dict[str, Any]) -> None:
 
 
 def requested_fields_violation(msg: dict[str, Any]) -> list[str]:
-    """Fields a bank asked for beyond bands (the greedy-bank check)."""
-    requested = msg.get("request_fields") or []
+    """Fields a bank asked for beyond bands (the greedy-bank check).
+
+    Anything that is not a list of strings counts as a violation too.
+    """
+    requested = msg.get("request_fields")
+    if requested is None:
+        return []
+    if not isinstance(requested, list) or not all(isinstance(f, str) for f in requested):
+        return ["malformed request_fields"]
     return sorted(f for f in requested if f not in ALLOWED_REQUEST_FIELDS)
 
 
@@ -99,11 +106,22 @@ def encode(msg: dict[str, Any]) -> str:
     return json.dumps(msg, separators=(",", ":"), sort_keys=True)
 
 
+def _reject_constant(name: str) -> Any:
+    raise ValueError(f"non-finite number {name} is not allowed")
+
+
+def _finite_float(text: str) -> float:
+    value = float(text)
+    if value != value or value in (float("inf"), float("-inf")):
+        raise ValueError(f"non-finite number {text} is not allowed")
+    return value
+
+
 def decode(payload: str | None) -> dict[str, Any]:
     if not payload:
         return {"kind": "error", "message": "empty payload"}
     try:
-        obj = json.loads(payload)
-    except json.JSONDecodeError:
-        return {"kind": "error", "message": "payload is not JSON"}
+        obj = json.loads(payload, parse_constant=_reject_constant, parse_float=_finite_float)
+    except (json.JSONDecodeError, ValueError):
+        return {"kind": "error", "message": "payload is not valid JSON"}
     return obj if isinstance(obj, dict) else {"kind": "error", "message": "payload is not an object"}
