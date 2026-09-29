@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { findListings, startHomeNegotiation } from '../../core/home.js';
 import { computeBands } from '../../core/bands.js';
 import { Lock, Check, Arrow, Spinner, Shield } from './Icons.jsx';
+import CountUp from './CountUp.jsx';
 
 const money = (v) => `$${Math.round(v).toLocaleString()}`;
 
@@ -99,8 +100,8 @@ export default function StageHome({ form, bands, onDone, onSkip }) {
               <div className="deal">
                 <div className="kpis" style={{ gridTemplateColumns: 'repeat(4, minmax(0,1fr))' }}>
                   <div className="kpi"><span className="k">Asking</span><span className="v">{money(picked.asking)}</span></div>
-                  <div className="kpi green"><span className="k">Agreed</span><span className="v">{money(result.price)}</span><span className="n">{money(result.savings)} under asking</span></div>
-                  <div className="kpi"><span className="k">New loan</span><span className="v">{money(newLoan)}</span><span className="n">same {money(downPayment)} down</span></div>
+                  <div className="kpi green"><span className="k">Agreed</span><span className="v"><CountUp value={result.price} prefix="$" duration={1100} /></span><span className="n"><CountUp value={result.savings} prefix="$" duration={1100} /> under asking</span></div>
+                  <div className="kpi"><span className="k">New loan</span><span className="v"><CountUp value={newLoan} prefix="$" duration={1100} /></span><span className="n">same {money(downPayment)} down</span></div>
                   <div className="kpi blue"><span className="k">Loan vs. value</span><span className="v">{bands.ltvBand} → {after.ltvBand}</span><span className="n">{after.ltvBand !== bands.ltvBand ? 'cheaper pricing tier' : 'same tier'}</span></div>
                 </div>
                 <div className="note"><Lock width={14} height={14} /><span>Only the new ranges go to the lenders. The seller's agent never saw your budget; the lenders never see the address.</span></div>

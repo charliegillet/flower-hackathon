@@ -5,6 +5,7 @@ import { flowerAvailable, startFlowerNegotiation } from '../../core/flowerNegoti
 import { bandsForDisplay } from '../../core/bands.js';
 import { Lock, Arrow, Check, Block, Shield, Spinner } from './Icons.jsx';
 import Approval from './Approval.jsx';
+import CountUp from './CountUp.jsx';
 
 const STATUS = {
   waiting: ['idle', 'Waiting'], sent: ['work', 'Pricing'], thinking: ['work', 'Thinking'], request: ['warn', 'Asking for more'],
@@ -188,11 +189,11 @@ export default function StageBanks({ bands, mandate = {}, principal, horizonYear
 
           {bs.offer && (
             <div className="offer">
-              <div className="kpi"><span className="k">Rate</span><span className="v">{bs.offer.rate.toFixed(3)}%</span></div>
+              <div className="kpi"><span className="k">Rate</span><span className="v"><CountUp value={bs.offer.rate} decimals={3} suffix="%" /></span></div>
               <div className="kpi"><span className="k">Points</span><span className="v">{bs.offer.points}</span></div>
-              <div className="kpi"><span className="k">Fees</span><span className="v">${bs.offer.fees.toLocaleString()}</span></div>
-              <div className="kpi"><span className="k">Monthly</span><span className="v">${bs.offer.monthly.toLocaleString()}</span></div>
-              <div className="kpi strong"><span className="k">{horizonYears}-year total cost</span><span className="v">${bs.offer.total.toLocaleString()}</span></div>
+              <div className="kpi"><span className="k">Fees</span><span className="v"><CountUp value={bs.offer.fees} prefix="$" /></span></div>
+              <div className="kpi"><span className="k">Monthly</span><span className="v"><CountUp value={bs.offer.monthly} prefix="$" /></span></div>
+              <div className="kpi strong"><span className="k">{horizonYears}-year total cost</span><span className="v"><CountUp value={bs.offer.total} prefix="$" /></span></div>
               {bs.offer.prepayPenalty !== undefined && <div className="kpi"><span className="k">Prepay penalty</span><span className="v small">{bs.offer.prepayPenalty ? 'Yes' : 'None'}</span></div>}
               {bs.offer.closeDays != null && <div className="kpi"><span className="k">Close in</span><span className="v small">{bs.offer.closeDays} days</span></div>}
             </div>
