@@ -276,3 +276,12 @@ def test_device_bands_without_bureau_file_are_self_reported():
 def test_device_bands_reject_raw_fields_and_non_home_loans(bad):
     with pytest.raises(RuntimeError, match="Cannot price"):
         _device_run({"bands": bad, "horizon_years": 7})
+
+
+def test_horizon_past_term_and_ltv_over_95_are_handled():
+    from blindquote.core.intake import normalize
+    assert pricing.total_cost(675_000, 6.5, 0, 1000, horizon_years=30, term_years=15) > 0
+    bands, _, horizon, _ = normalize({"bands": dict(DEVICE_BANDS, termMonths=180), "horizon_years": 30})
+    assert horizon == 15
+    bands, *_ = normalize({"bands": dict(DEVICE_BANDS, ltvBand=">95%")})
+    assert bands["ltv_band"] == ">95%"
