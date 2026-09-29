@@ -285,3 +285,16 @@ def test_horizon_past_term_and_ltv_over_95_are_handled():
     assert horizon == 15
     bands, *_ = normalize({"bands": dict(DEVICE_BANDS, ltvBand=">95%")})
     assert bands["ltv_band"] == ">95%"
+
+
+def test_bank_ledger_lists_every_band_it_received():
+    events, _ = _device_run({"bands": DEVICE_BANDS, "consent_token": "consent_demo_maya", "horizon_years": 7})
+    ledger = next(e for e in events if e["type"] == "bq.ledger")
+    banks = [p for p in ledger["parties"] if p["role"] == "bank"]
+    assert banks
+    for p in banks:
+        learned = " | ".join(p["learned"])
+        assert "assets band" in learned and "time in job" in learned and "state CA" in learned
+        assert "credit issues in 7 yrs: no" in learned
+        assert "loan_mid" not in learned
+        assert "exact assets" in p["never"] and "assets" not in p["never"]

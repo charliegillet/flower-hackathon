@@ -27,6 +27,25 @@ RUN_BUDGET_S = 240.0  # whole run, well inside Flower's 5-minute task window
 VERDICT_RESERVE_S = 25.0  # always kept back for ranking + explanation
 
 
+_BAND_LABELS = (
+    ("loan_band", "loan {}"), ("ltv_band", "LTV {}"), ("dti_band", "DTI {}"),
+    ("asset_band", "assets band {}"), ("tenure_band", "time in job {}"),
+    ("employment_status", "employment {}"), ("residency", "residency {}"),
+    ("property_state", "state {}"), ("occupancy", "occupancy {}"), ("purpose", "purpose {}"),
+    ("product", "product {}"),
+)
+
+
+def _band_items(bands: dict[str, Any]) -> list[str]:
+    """Human-readable list of every band a party receives (loan_mid is part of the loan band)."""
+    items = [fmt.format(bands[k]) for k, fmt in _BAND_LABELS if bands.get(k) is not None]
+    if bands.get("term_years") is not None:
+        items.append(f"term {bands['term_years']} years")
+    if "derogatory" in bands:
+        items.append(f"credit issues in 7 yrs: {'yes' if bands['derogatory'] else 'no'}")
+    return items
+
+
 @dataclass
 class Timeouts:
     hello: float = 30
@@ -226,7 +245,7 @@ class Coordinator:
         ev.msg(borrower, COORD, "bands", f"Loan {bands['loan_band']}, LTV {bands['ltv_band']}, DTI {bands['dti_band']}",
                list(shown))
         ev.emit("bq.bands", bands=shown, withheld=out.get("withheld", []))
-        for item in (f"loan {bands['loan_band']}", f"LTV {bands['ltv_band']}", f"DTI {bands['dti_band']}"):
+        for item in _band_items(bands):
             self.ledger.learn("BlindQuote Coordinator", item)
         self.ledger.learn(self.nodes[borrower]["name"], "every quote and the final ranking")
         ev.stage("bands", "done", "Only bands left the borrower device")
@@ -244,8 +263,7 @@ class Coordinator:
         shown = {k: bands[k] for k in ("loan_band", "ltv_band", "dti_band", "occupancy", "term_years") if k in bands}
         ev.emit("bq.bands", bands=shown, withheld=["name", "exact income", "assets", "exact credit score",
                                                    "monthly debts", "employer", "address", "stay horizon"])
-        for item in (f"loan {bands['loan_band']}", f"LTV {bands['ltv_band']}", f"DTI {bands['dti_band']}",
-                     f"stay horizon {horizon} years (for ranking only, never forwarded)"):
+        for item in (*_band_items(bands), f"stay horizon {horizon} years (for ranking only, never forwarded)"):
             self.ledger.learn("BlindQuote Coordinator", item)
         self.ledger.party("Your device", "borrower")
         self.ledger.learn("Your device", "every quote and the final ranking")
@@ -361,7 +379,7 @@ class Coordinator:
             ev.msg(COORD, nid, "quote_request", "Sealed quote request", ["bands", "attestation"], sealed=True)
             credit = (f"FICO band {att['fico_band']} (attested for this session only)" if att
                       else f"FICO band {bands.get('fico_self_reported')} (self-reported)")
-            for item in (f"loan {bands['loan_band']}", f"LTV {bands['ltv_band']}", f"DTI {bands['dti_band']}", credit):
+            for item in (*_band_items(wire_bands), credit):
                 self.ledger.learn(states[nid].name, item)
 
         def on_reply(nid: str, msg: dict[str, Any]) -> None:
