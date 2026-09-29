@@ -1,0 +1,17 @@
+# BlindQuote bridge: starts Flower runs and streams their events to the Node backend.
+# Listens on 127.0.0.1 only; the backend (/api/flower, JWT-protected) is the public entry.
+[Unit]
+Description=BlindQuote Flower bridge
+After=flower-bq-federation.service
+Wants=flower-bq-federation.service
+
+[Service]
+Type=simple
+WorkingDirectory=/srv/flower-finance
+Environment=BQ_MODE=local
+ExecStart=/srv/flower-finance/.venv/bin/uvicorn ui.server:app --host 127.0.0.1 --port 8765
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
