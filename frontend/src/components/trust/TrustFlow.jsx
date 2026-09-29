@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import StageAnswers from './StageAnswers.jsx';
 import StageSeal from './StageSeal.jsx';
 import StageBanks from './StageBanks.jsx';
@@ -42,6 +42,12 @@ export default function TrustFlow({ user, onAccepted, onError }) {
   // Disclosure ledger recorded by the real Flower run (null = show the policy summary).
   const [ledger, setLedger] = useState(null);
   const onLedger = useCallback((parties) => setLedger(parties), []);
+  useEffect(() => { if (stage !== 'banks') setLedger(null); }, [stage]);
+  // Editing any answer after "Fill with sample data" invalidates the demo consent token.
+  const editForm = useCallback((next) => setForm((prev) => {
+    const value = typeof next === 'function' ? next(prev) : next;
+    return value === SAMPLE_FORM || !value._consentToken ? value : (({ _consentToken, ...rest }) => rest)(value);
+  }), []);
   const reached = STAGES.findIndex((s) => s.key === stage);
 
   const principal = Number(form.amount) || 0;
@@ -64,7 +70,7 @@ export default function TrustFlow({ user, onAccepted, onError }) {
       </div>
 
       {stage === 'answers' && (
-        <StageAnswers form={form} setForm={setForm} onSeal={() => setStage('seal')} onFillSample={() => setForm(SAMPLE_FORM)} />
+        <StageAnswers form={form} setForm={editForm} onSeal={() => setStage('seal')} onFillSample={() => setForm(SAMPLE_FORM)} />
       )}
       {stage === 'seal' && (
         <StageSeal form={form} onBack={() => setStage('answers')} onApprove={(b) => { setBands(b); setStage('banks'); }} />
