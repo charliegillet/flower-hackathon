@@ -1,0 +1,80 @@
+{
+  "_comment": "Single source of truth for the six BlindQuote SuperNodes. data_dir is relative to the repo root locally and mounted at /data/<node> in containers. provider selects the upstream model for that node.",
+  "nodes": [
+    {
+      "key": "borrower",
+      "provider": null,
+      "node_config": {
+        "role": "borrower",
+        "name": "Borrower device",
+        "org_kind": "Your device (anonymous)",
+        "data_dir": "nodes/borrower"
+      },
+      "latlon": null
+    },
+    {
+      "key": "bureau",
+      "provider": null,
+      "node_config": {
+        "role": "bureau",
+        "name": "Pacific Credit Bureau",
+        "org_kind": "Credit bureau",
+        "location": "Costa Mesa, CA",
+        "data_dir": "nodes/bureau"
+      },
+      "latlon": "33.6411,-117.9187"
+    },
+    {
+      "key": "bank-a",
+      "provider": "flower",
+      "node_config": {
+        "role": "bank",
+        "name": "Cardinal Bank",
+        "org_kind": "Regional bank",
+        "location": "San Jose, CA",
+        "model": "flwrlabs/endeavor-1.0",
+        "data_dir": "nodes/bank-a"
+      },
+      "latlon": "37.3382,-121.8863"
+    },
+    {
+      "key": "bank-b",
+      "provider": "nebius-kimi",
+      "node_config": {
+        "role": "bank",
+        "name": "Golden Gate Credit Union",
+        "org_kind": "Credit union",
+        "location": "San Francisco, CA",
+        "model": "dedicated/flowerai/Kimi-K2.7-Code-1OUHWL",
+        "data_dir": "nodes/bank-b"
+      },
+      "latlon": "37.7749,-122.4194"
+    },
+    {
+      "key": "bank-c",
+      "provider": "nebius-minimax",
+      "node_config": {
+        "role": "bank",
+        "name": "Bay Mortgage Co.",
+        "org_kind": "Online lender",
+        "location": "Oakland, CA",
+        "model": "dedicated/flowerai/MiniMax-M3-OOLI9o",
+        "data_dir": "nodes/bank-c"
+      },
+      "latlon": "37.8044,-122.2712"
+    },
+    {
+      "key": "bank-d",
+      "provider": "nebius-kimi",
+      "node_config": {
+        "role": "bank",
+        "name": "Rapid Lending Co.",
+        "org_kind": "Non-bank lender",
+        "location": "Las Vegas, NV",
+        "model": "dedicated/flowerai/Kimi-K2.7-Code-1OUHWL",
+        "data_dir": "nodes/bank-d"
+      },
+      "latlon": "36.1699,-115.1398"
+    }
+  ]
+}

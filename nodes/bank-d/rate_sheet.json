@@ -1,0 +1,20 @@
+{
+  "name": "Rapid Lending Co.",
+  "persona": "a high-pressure lender that advertises a teaser rate and harvests borrower data",
+  "par_rate": 6.58,
+  "rate_per_point": 0.25,
+  "margin_pts": 1.4,
+  "floor_pts": 1.2,
+  "fees": 2995,
+  "buydown_pts": 1.5,
+  "overlays": {
+    "min_fico": 620,
+    "max_dti": 55,
+    "max_ltv_band": ">95%"
+  },
+  "greedy": true,
+  "misleading_apr": true,
+  "strategy": "hold price and push for more borrower data",
+  "reprice": false,
+  "pitch": "Rapid Lending: our lowest advertised rate in the Bay Area!"
+}

@@ -1,0 +1,127 @@
+"""Wire protocol and the allowlist guard.
+
+Every grid payload is a JSON object with a ``kind``. The guard enforces, in
+code, which fields each kind may carry. Anything else is blocked and recorded.
+"""
+
+from __future__ import annotations
+
+import json
+from typing import Any
+
+# Fields each message kind may carry across the grid.
+ALLOWED_FIELDS: dict[str, set[str]] = {
+    "hello": {"kind"},
+    "hello_reply": {"kind", "role", "name", "org_kind", "model", "location"},
+    "bands_request": {"kind", "session"},
+    "bands": {"kind", "session", "bands", "token", "withheld"},
+    "attest_request": {"kind", "session", "token"},
+    "attestation": {"kind", "session", "fico_band", "expires", "sig", "bureau"},
+    "quote_request": {"kind", "session", "bands", "attestation", "round"},
+    "quote": {
+        "kind", "session", "round", "bank", "eligible", "reason", "options",
+        "apr_stated", "note", "request_fields", "model", "attestation_ok",
+    },
+    "counter_request": {"kind", "session", "bands", "attestation", "round", "best_competing_total", "your_offer"},
+    "counter": {
+        "kind", "session", "round", "bank", "decision", "options", "apr_stated",
+        "note", "request_fields", "model", "attestation_ok",
+    },
+    "error": {"kind", "message"},
+}
+
+# Band fields the borrower may disclose; anything else in `bands` is blocked.
+ALLOWED_BAND_FIELDS = {
+    "loan_band", "loan_mid", "ltv_band", "dti_band", "occupancy",
+    "term_years", "property_state", "horizon_years", "product",
+}
+
+# Raw fields that must never cross the grid in any payload.
+FORBIDDEN_FIELDS = {
+    "exact_income", "income", "annual_income", "assets", "exact_assets", "borrower_name", "full_name",
+    "ssn", "dob", "credit_score", "exact_credit_score", "address", "employer",
+    "account_numbers", "monthly_debts", "down_payment",
+}
+
+# Fields a bank may ask the borrower for (bands only).
+ALLOWED_REQUEST_FIELDS: set[str] = set()
+
+
+class GuardViolation(Exception):
+    """A payload tried to carry fields that are not allowed."""
+
+    def __init__(self, kind: str, fields: list[str], detail: str):
+        super().__init__(detail)
+        self.kind = kind
+        self.fields = fields
+        self.detail = detail
+
+
+def _walk_keys(obj: Any) -> set[str]:
+    keys: set[str] = set()
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            keys.add(k)
+            keys |= _walk_keys(v)
+    elif isinstance(obj, list):
+        for item in obj:
+            keys |= _walk_keys(item)
+    return keys
+
+
+def check(msg: dict[str, Any]) -> None:
+    """Raise ``GuardViolation`` if ``msg`` carries anything not allowlisted."""
+    kind = msg.get("kind")
+    if kind not in ALLOWED_FIELDS:
+        raise GuardViolation(str(kind), [], f"unknown message kind {kind!r}")
+    extra = sorted(set(msg) - ALLOWED_FIELDS[kind])
+    if extra:
+        raise GuardViolation(kind, extra, f"{kind} carried non-allowlisted fields: {', '.join(extra)}")
+    forbidden = sorted(_walk_keys(msg) & FORBIDDEN_FIELDS)
+    if forbidden:
+        raise GuardViolation(kind, forbidden, f"{kind} carried raw personal data: {', '.join(forbidden)}")
+    bands = msg.get("bands")
+    if isinstance(bands, dict):
+        extra_bands = sorted(set(bands) - ALLOWED_BAND_FIELDS)
+        if extra_bands:
+            raise GuardViolation(kind, extra_bands, f"bands carried non-band fields: {', '.join(extra_bands)}")
+
+
+def requested_fields_violation(msg: dict[str, Any]) -> list[str]:
+    """Fields a bank asked for beyond bands (the greedy-bank check).
+
+    Anything that is not a list of strings counts as a violation too.
+    """
+    requested = msg.get("request_fields")
+    if requested is None:
+        return []
+    if not isinstance(requested, list) or not all(isinstance(f, str) for f in requested):
+        return ["malformed request_fields"]
+    return sorted(f for f in requested if f not in ALLOWED_REQUEST_FIELDS)
+
+
+def encode(msg: dict[str, Any]) -> str:
+    """Guard-check then serialize an outbound payload."""
+    check(msg)
+    return json.dumps(msg, separators=(",", ":"), sort_keys=True)
+
+
+def _reject_constant(name: str) -> Any:
+    raise ValueError(f"non-finite number {name} is not allowed")
+
+
+def _finite_float(text: str) -> float:
+    value = float(text)
+    if value != value or value in (float("inf"), float("-inf")):
+        raise ValueError(f"non-finite number {text} is not allowed")
+    return value
+
+
+def decode(payload: str | None) -> dict[str, Any]:
+    if not payload:
+        return {"kind": "error", "message": "empty payload"}
+    try:
+        obj = json.loads(payload, parse_constant=_reject_constant, parse_float=_finite_float)
+    except (json.JSONDecodeError, ValueError):
+        return {"kind": "error", "message": "payload is not valid JSON"}
+    return obj if isinstance(obj, dict) else {"kind": "error", "message": "payload is not an object"}
