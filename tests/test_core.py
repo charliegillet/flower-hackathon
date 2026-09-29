@@ -40,7 +40,7 @@ def test_total_cost_trades_points_against_rate():
 
 
 def test_round2_discount_never_breaks_floor():
-    sheet = json.loads((ROOT / "nodes/bank-c/rate_sheet.json").read_text())
+    sheet = json.loads((ROOT / "nodes/citi/rate_sheet.json").read_text())
     bands = {"loan_mid": 675_000, "ltv_band": "75.01-80%", "dti_band": "36.01-43%", "horizon_years": 7, "term_years": 30}
     at_floor = pricing.price_from_sheet(sheet, bands, "740-759", extra_discount_pts=99)
     assert at_floor["margin"] == sheet["floor_pts"]
@@ -77,7 +77,7 @@ def test_bureau_rejects_unknown_token_and_bank_rejects_forged_band():
     bands = {"loan_band": "$650k-$700k", "loan_mid": 675_000, "ltv_band": "75.01-80%", "dti_band": "36.01-43%",
              "horizon_years": 7, "term_years": 30}
     quote = handle_node_message({"kind": "quote_request", "session": "s", "round": 1, "bands": bands, "attestation": forged},
-                                _cfg("bank-a", "bank"), NO_LLM)
+                                _cfg("chase", "bank"), NO_LLM)
     assert quote["kind"] == "quote" and quote["eligible"] is False and quote["attestation_ok"] is False
 
 
@@ -103,20 +103,20 @@ def test_full_negotiation_story(run_events):
     types = [e["type"] for e in events]
     stages = [e["stage"] for e in events if e["type"] == "bq.stage" and e["status"] == "done"]
     assert stages == ["discover", "bands", "attest", "round1", "round2", "verdict"]
-    assert sum(t == "bq.node" for t in types) == 7  # coordinator + 6 SuperNodes
+    assert sum(t == "bq.node" for t in types) == 9  # coordinator + borrower + bureau + 6 banks
     assert types[-1] == "bq.done"
 
     guards = [e for e in events if e["type"] == "bq.guard"]
     assert {(g["bank"], g["violation"]) for g in guards} >= {
-        ("Rapid Lending Co.", "requested_fields"), ("Rapid Lending Co.", "apr_mismatch")}
+        ("U.S. Bank", "requested_fields"), ("U.S. Bank", "apr_mismatch")}
 
     improves = {e["bank"] for e in events if e["type"] == "bq.improve"}
-    assert "Bay Mortgage Co." in improves
+    assert "Citibank" in improves
     declines = {(e["bank"], e["round"]) for e in events if e["type"] == "bq.decline"}
-    assert ("Golden Gate Credit Union", 2) in declines
+    assert ("Navy Federal Credit Union", 2) in declines
 
-    assert verdict["winner"] == "Bay Mortgage Co."
-    assert verdict["ranking"][-1]["bank"] == "Rapid Lending Co."  # flagged lenders rank last
+    assert verdict["winner"] == "Citibank"
+    assert verdict["ranking"][-1]["bank"] == "U.S. Bank"  # flagged lenders rank last
     assert verdict["savings_vs_single_quote"] > 0
 
 
@@ -144,7 +144,7 @@ def test_hostile_bank_cannot_crash_or_win(monkeypatch, evil):
 
     def hostile(msg, cfg, llm):
         reply = real(msg, cfg, llm)
-        if cfg.get("name") == "Rapid Lending Co." and reply.get("kind") == "quote":
+        if cfg.get("name") == "U.S. Bank" and reply.get("kind") == "quote":
             reply.update(evil)
         return reply
 
@@ -155,7 +155,7 @@ def test_hostile_bank_cannot_crash_or_win(monkeypatch, evil):
         "best 30-year fixed, staying about 7 years")
     grid.close()
     assert events[-1]["type"] == "bq.done"
-    assert verdict["winner"] != "Rapid Lending Co."
+    assert verdict["winner"] != "U.S. Bank"
     json.dumps(events, allow_nan=False)  # every event stays strict JSON
 
 
@@ -174,7 +174,7 @@ def test_apr_sent_as_text_is_flagged(monkeypatch):
 
     def sneaky(msg, cfg, llm):
         reply = real(msg, cfg, llm)
-        if cfg.get("name") == "Cardinal Bank" and reply.get("kind") == "quote":
+        if cfg.get("name") == "Chase" and reply.get("kind") == "quote":
             reply["apr_stated"] = "6.5"
         return reply
 
@@ -183,7 +183,7 @@ def test_apr_sent_as_text_is_flagged(monkeypatch):
     events: list[dict] = []
     Coordinator(grid, Emitter(events.append), NO_LLM, timeouts=Timeouts(5, 5, 5, 10, 10), mode="sim").run("x")
     grid.close()
-    assert any(e["type"] == "bq.guard" and e["bank"] == "Cardinal Bank" and e["violation"] == "apr_mismatch" for e in events)
+    assert any(e["type"] == "bq.guard" and e["bank"] == "Chase" and e["violation"] == "apr_mismatch" for e in events)
 
 
 def test_banks_never_see_the_consent_token_and_verify_the_band(run_events):
@@ -191,7 +191,7 @@ def test_banks_never_see_the_consent_token_and_verify_the_band(run_events):
     assert "consent_7f3a9c2e41" not in json.dumps(events)
     attests = [e for e in events if e["type"] == "bq.attest"]
     assert attests[0]["signature_ok"] is None and attests[-1]["signature_ok"] is True
-    assert attests[-1]["verified_by"] == 4
+    assert attests[-1]["verified_by"] == 6
 
 
 def test_run_budget_is_respected_when_a_bank_is_silent(monkeypatch):
@@ -200,7 +200,7 @@ def test_run_budget_is_respected_when_a_bank_is_silent(monkeypatch):
     real = inproc.handle_node_message
 
     def silent_bank(msg, cfg, llm):
-        if cfg.get("name") == "Golden Gate Credit Union" and msg.get("kind") == "quote_request":
+        if cfg.get("name") == "Navy Federal Credit Union" and msg.get("kind") == "quote_request":
             import time as _t
             _t.sleep(4)  # never answers within the (tiny) budget
         return real(msg, cfg, llm)
