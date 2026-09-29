@@ -25,6 +25,7 @@ export default function StageBanks({ bands, mandate = {}, principal, horizonYear
 
   useEffect(() => {
     let run = { cancel: () => {} };
+    let priv = null; // private-lender simulation running beside a live Flower run
     let cancelled = false;
     const startSimulated = () => {
       setEngine('simulated');
@@ -35,6 +36,9 @@ export default function StageBanks({ bands, mandate = {}, principal, horizonYear
         if (cancelled) return;
         setFallbackNote(e.reason === 'busy' ? 'Simulated: Flower busy' : 'Simulated: Flower prices home loans only');
         setEvents([]);
+        // The full simulation includes the private lenders; stop the side-run so they don't run twice.
+        priv?.cancel();
+        priv = null;
         startSimulated();
         return;
       }
@@ -56,8 +60,8 @@ export default function StageBanks({ bands, mandate = {}, principal, horizonYear
         // Private lenders have no Flower node yet: they run in the browser alongside the live banks.
         // Their simulation must not end the run or open its own round 2: the Flower coordinator owns both.
         const onPrivate = (e) => { if (e.type !== 'done' && e.type !== 'round2') onEvent(e); };
-        const priv = startNegotiation(bands, BANKS.filter((b) => b.kind === 'private'), onPrivate, { principal, horizonYears, mandate });
-        run = { cancel: () => { live.cancel(); priv.cancel(); } };
+        priv = startNegotiation(bands, BANKS.filter((b) => b.kind === 'private'), onPrivate, { principal, horizonYears, mandate });
+        run = { cancel: () => { live.cancel(); priv?.cancel(); } };
       } else {
         startSimulated();
       }
