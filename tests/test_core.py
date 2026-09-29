@@ -127,3 +127,32 @@ def test_no_raw_personal_data_in_any_event(run_events):
     ledger = next(e for e in events if e["type"] == "bq.ledger")
     banks = [p for p in ledger["parties"] if p["role"] == "bank"]
     assert banks and all("exact income" in p["never"] for p in banks)
+
+
+@pytest.mark.parametrize("evil", [
+    {"options": 7},
+    {"options": [{"rate": 6.0, "points": 0, "fees": -500000}]},
+    {"options": [{"rate": 6.0, "points": 0, "fees": 1000}], "apr_stated": float("nan")},
+    {"options": [{"rate": -1200, "points": 0, "fees": 1000}]},
+    {"request_fields": 5},
+])
+def test_hostile_bank_cannot_crash_or_win(monkeypatch, evil):
+    import sim.inprocess as inproc
+
+    real = inproc.handle_node_message
+
+    def hostile(msg, cfg, llm):
+        reply = real(msg, cfg, llm)
+        if cfg.get("name") == "Rapid Lending Co." and reply.get("kind") == "quote":
+            reply.update(evil)
+        return reply
+
+    monkeypatch.setattr(inproc, "handle_node_message", hostile)
+    grid = build_federation(use_llm=False, latency=False)
+    events: list[dict] = []
+    verdict = Coordinator(grid, Emitter(events.append), NO_LLM, timeouts=Timeouts(5, 5, 5, 10, 10), mode="sim").run(
+        "best 30-year fixed, staying about 7 years")
+    grid.close()
+    assert events[-1]["type"] == "bq.done"
+    assert verdict["winner"] != "Rapid Lending Co."
+    json.dumps(events, allow_nan=False)  # every event stays strict JSON
