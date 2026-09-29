@@ -35,6 +35,7 @@ const applicationSchema = new mongoose.Schema(
         required: true,
       },
       monthlyDebt: { type: Number, default: 0 },
+      totalAssets: { type: Number, default: 0 },
       creditScore: { type: Number, min: 300, max: 850 },
     },
     loan: {

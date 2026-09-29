@@ -279,3 +279,66 @@ tbody tr:hover {
   background: #7f1d1d;
   color: #fca5a5;
 }
+
+/* Sectioned profile / settings cards */
+.profile {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.section {
+  padding: 20px 24px;
+}
+
+.section-head {
+  border-bottom: 1px solid #262d3a;
+  padding-bottom: 10px;
+  margin-bottom: 16px;
+}
+.section-head h3 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+}
+.section-head p {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.section-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  margin-top: 16px;
+}
+.section-foot button {
+  background: #f0b429;
+  border: none;
+  color: #111;
+  font-weight: 600;
+  padding: 9px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.form-section {
+  margin: 20px 0 12px;
+  padding-top: 16px;
+  border-top: 1px solid #262d3a;
+  font-size: 0.95rem;
+  color: #f0b429;
+}
+
+label.check {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding-top: 22px;
+  font-size: 0.9rem;
+  color: #e6e9ef;
+}
+label.check input {
+  width: 16px;
+  height: 16px;
+}

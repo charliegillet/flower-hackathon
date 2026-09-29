@@ -51,6 +51,16 @@ export function underwrite(app) {
   risk += loanToIncome > 3 ? 20 : loanToIncome > 1.5 ? 10 : 0;
   risk += EMPLOYMENT_PENALTY[applicant.employmentStatus] ?? 10;
 
+  // Reserves: assets covering a year+ of payments meaningfully de-risk the loan.
+  const assets = applicant.totalAssets || 0;
+  if (assets >= loan.amount) {
+    risk -= 15;
+    reasons.push('Assets fully cover the requested amount');
+  } else if (assets >= loan.amount * 0.5) {
+    risk -= 8;
+    reasons.push('Substantial assets relative to the loan');
+  }
+
   if (dti > 0.43) reasons.push(`DTI ${(dti * 100).toFixed(0)}% is above the 43% guideline`);
   if (loanToIncome > 1.5) reasons.push('Requested amount is high relative to annual income');
   if (applicant.employmentStatus === 'unemployed') reasons.push('No current employment');

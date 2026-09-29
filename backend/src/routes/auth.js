@@ -5,7 +5,8 @@ import { signToken, requireAuth } from '../auth.js';
 
 const router = Router();
 
-const CUSTOMER_PROFILE_KEYS = ['annualIncome', 'employmentStatus', 'monthlyDebt', 'creditScore'];
+const PROFILE_SECTIONS = ['personal', 'income', 'assets', 'debts', 'credit'];
+const SETTINGS_KEYS = ['emailNotifications', 'currency'];
 
 router.post('/register', async (req, res, next) => {
   try {
@@ -47,20 +48,53 @@ router.get('/me', requireAuth, (req, res) => {
   res.json(req.user.toSafeJSON());
 });
 
-// Update own info. Customers edit their financial profile; bankers edit name/bankName.
+// Update own info. Accepts { name, bankName, profile: {<section>: {...}}, settings: {...} }.
+// Each profile section is merged independently so the UI can save per section.
 router.put('/me', requireAuth, async (req, res, next) => {
   try {
-    const { name, bankName, profile } = req.body;
+    const { name, bankName, profile, settings } = req.body;
     if (name) req.user.name = name;
     if (req.user.role === 'bank' && bankName !== undefined) req.user.bankName = bankName;
+
     if (req.user.role === 'customer' && profile) {
-      for (const key of CUSTOMER_PROFILE_KEYS) {
-        if (profile[key] !== undefined) req.user.profile[key] = profile[key];
+      for (const section of PROFILE_SECTIONS) {
+        if (profile[section]) {
+          req.user.profile = req.user.profile || {};
+          req.user.profile[section] = {
+            ...(req.user.profile[section]?.toObject?.() || req.user.profile[section] || {}),
+            ...profile[section],
+          };
+        }
       }
       req.user.markModified('profile');
     }
+
+    if (settings) {
+      for (const key of SETTINGS_KEYS) {
+        if (settings[key] !== undefined) req.user.settings[key] = settings[key];
+      }
+      req.user.markModified('settings');
+    }
+
     await req.user.save();
     res.json(req.user.toSafeJSON());
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/password', requireAuth, async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters' });
+    }
+    if (!(await bcrypt.compare(currentPassword || '', req.user.passwordHash))) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+    req.user.passwordHash = await bcrypt.hash(newPassword, 10);
+    await req.user.save();
+    res.json({ ok: true });
   } catch (err) {
     next(err);
   }

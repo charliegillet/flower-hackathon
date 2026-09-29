@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api, getToken, setToken } from './api.js';
 import AuthForm from './components/AuthForm.jsx';
 import Profile from './components/Profile.jsx';
+import Settings from './components/Settings.jsx';
 import ApplicationForm from './components/ApplicationForm.jsx';
 import ApplicationList from './components/ApplicationList.jsx';
 import ApplicationDetail from './components/ApplicationDetail.jsx';
@@ -90,7 +91,10 @@ export default function App() {
             {isBank ? 'All applications' : 'My applications'} ({applications.length})
           </button>
           <button className={view === 'profile' ? 'active' : ''} onClick={() => setView('profile')}>
-            My info
+            Profile
+          </button>
+          <button className={view === 'settings' ? 'active' : ''} onClick={() => setView('settings')}>
+            Settings
           </button>
           <button onClick={logout}>Log out</button>
         </nav>
@@ -126,6 +130,7 @@ export default function App() {
           />
         )}
         {view === 'profile' && <Profile user={user} onSaved={setUser} />}
+        {view === 'settings' && <Settings user={user} onSaved={setUser} />}
       </main>
     </div>
   );

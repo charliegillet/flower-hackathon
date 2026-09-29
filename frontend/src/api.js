@@ -25,6 +25,8 @@ export const api = {
   login: (payload) => request('/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
   me: () => request('/auth/me'),
   updateMe: (payload) => request('/auth/me', { method: 'PUT', body: JSON.stringify(payload) }),
+  changePassword: (currentPassword, newPassword) =>
+    request('/auth/password', { method: 'POST', body: JSON.stringify({ currentPassword, newPassword }) }),
 
   listApplications: () => request('/applications'),
   getApplication: (id) => request(`/applications/${id}`),

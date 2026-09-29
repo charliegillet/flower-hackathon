@@ -14,9 +14,10 @@ A client submits their info to request a loan. A **bank agent** underwrites the 
 ## Features
 
 0. **Accounts** — register as a **loan applicant** or a **bank reviewer** (JWT auth). Customers
-   manage their financial profile (income, debts, credit score, employment) under "My info"; it
-   prefills each application. Bankers see every application and record the final
-   approve/deny decision on top of the agent negotiation.
+   manage a sectioned financial profile — personal details, income & employment, assets, monthly
+   debts, credit — plus a settings page (password, preferences). The profile prefills each
+   application, and assets count in underwriting. Bankers see every application and record the
+   final approve/deny decision on top of the agent negotiation.
 1. **Apply for a loan** — name, income, employment, debts, credit score, amount, purpose, term.
 2. **Bank agent evaluation** — deterministic underwriting (credit band, DTI, loan-to-income,
    40% DTI payment cap) produces `approved` / `countered` / `denied` with terms and reasons.
@@ -67,7 +68,8 @@ npm run dev               # http://localhost:5173 (proxies /api -> :4000)
 | POST   | `/api/auth/register`              | Create account (`role`: `customer` or `bank`)  |
 | POST   | `/api/auth/login`                 | Log in, returns a JWT                          |
 | GET    | `/api/auth/me`                    | Current user                                   |
-| PUT    | `/api/auth/me`                    | Update name / profile / bankName               |
+| PUT    | `/api/auth/me`                    | Update name / profile sections / settings      |
+| POST   | `/api/auth/password`              | Change password                                |
 | POST   | `/api/applications`               | Submit application (customer); runs negotiation |
 | GET    | `/api/applications`               | List own applications (bank: all)              |
 | GET    | `/api/applications/:id`           | Application detail incl. conversation          |
