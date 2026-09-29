@@ -115,6 +115,20 @@ function moneyBand(value, step) {
   const lo = Math.floor(value / step) * step;
   return { lo, hi: lo + step, label: `${moneyK(lo)}–${moneyK(lo + step)}` };
 }
+// Loan-to-value on the Fannie Mae LLPA grid edges (upper edge inclusive), so the
+// range the user sees is exactly the band banks price from. 80.00% is "75.01–80%".
+const LTV_EDGES = [30, 60, 70, 75, 80, 85, 90, 95];
+function fannieLtvBand(ratio) {
+  if (!Number.isFinite(ratio) || ratio <= 0) return null;
+  const pct = Math.round(ratio * 10000) / 100;
+  let lo = 0;
+  for (const hi of LTV_EDGES) {
+    if (pct <= hi) return { label: lo === 0 ? `≤${hi}%` : `${lo + 0.01}–${hi}%` };
+    lo = hi;
+  }
+  return { label: '>95%' };
+}
+
 function ficoBand(score) {
   if (!score) return null;
   const lo = Math.max(300, Math.floor(score / 20) * 20);
@@ -144,9 +158,9 @@ export function computeBands(form) {
   return {
     token: form._token || null,
     dtiBand: pctBand(dti)?.label ?? null,
-    ltvBand: pctBand(ltv)?.label ?? null,
+    ltvBand: fannieLtvBand(ltv)?.label ?? null,
     assetBand: moneyBand(t.assets, 50_000)?.label ?? null,
-    loanBand: moneyBand(n(form.amount), 100_000)?.label ?? null,
+    loanBand: moneyBand(n(form.amount), 50_000)?.label ?? null,
     ficoBand: ficoBand(n(form.creditScore))?.label ?? null,
     tenureBand: tenureBand(form.yearsEmployed)?.label ?? null,
     employmentStatus: form.employmentStatus || null,
@@ -236,6 +250,9 @@ export const SAMPLE_FORM = {
   monthlyHousing: 2900, autoLoans: 420, studentLoans: 310, creditCards: 220, otherDebt: 0, totalBalances: 61000,
   creditScore: 752, derogatory: 'No',
   amount: 680000, purpose: 'home', termMonths: 360, propertyPrice: 850000, occupancy: 'Primary home', horizonYears: 7,
+  // Demo only: the sample applicant has granted the credit bureau node consent, so her
+  // credit range is bureau-signed. Other applicants' ranges stay self-reported.
+  _consentToken: 'consent_demo_maya',
 };
 
 export const EMPTY_FORM = Object.fromEntries(ALL_FIELDS.map((f) => [f.name, f.name === 'termMonths' ? 360 : f.name === 'purpose' ? 'home' : f.name === 'employmentStatus' ? 'employed' : '']));
