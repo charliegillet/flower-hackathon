@@ -108,12 +108,6 @@ export default function StageAnswers({ form, setForm, onSeal, onFillSample }) {
           </div>
         )}
 
-        <div className="split-foot">
-          <span className="sub">{missing.length ? `${missing.length} to go` : 'Ready. Nothing has left this device.'}</span>
-          <button type="button" className="btn ghost small" onClick={onFillSample}>Sample data</button>
-          <span className="spacer" />
-          <button type="button" className="btn primary" disabled={missing.length > 0} onClick={onSeal}>Seal and continue</button>
-        </div>
       </div>
 
       <div className="split-r">
@@ -153,6 +147,13 @@ export default function StageAnswers({ form, setForm, onSeal, onFillSample }) {
           </div>
         )}
 
+      </div>
+
+      <div className="split-foot">
+          <span className="sub">{missing.length ? `${missing.length} to go` : 'Ready. Nothing has left this device.'}</span>
+          <button type="button" className="btn ghost small" onClick={onFillSample}>Sample data</button>
+          <span className="spacer" />
+          <button type="button" className="btn primary" disabled={missing.length > 0} onClick={onSeal}>Seal and continue</button>
       </div>
     </div>
   );

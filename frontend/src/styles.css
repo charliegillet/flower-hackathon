@@ -351,8 +351,9 @@ label.check input { width: 16px; height: 16px; }
 @media (max-width: 1100px) { .dash-grid { grid-template-columns: 1fr; } .offer { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 
 /* ---------- Stage 1: two halves. Questions left, documents right. ---------- */
-.split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
-.split-l, .split-r { display: flex; flex-direction: column; gap: 14px; }
+.split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: stretch; }
+.split-l, .split-r { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+.split-r .dropbox { flex: 1; justify-content: center; }
 .split-l { background: var(--panel); border-radius: 16px; box-shadow: var(--shadow); padding: 26px 28px 20px; }
 .split-h h2 { font-size: 30px; margin-bottom: 4px; }
 .qs { display: flex; flex-direction: column; }
@@ -372,7 +373,7 @@ label.check input { width: 16px; height: 16px; }
 .more .sub { flex: 1; font-weight: 400; }
 .more svg { color: var(--muted); }
 .more-qs { animation: pop 0.25s ease-out; }
-.split-foot { display: flex; align-items: center; gap: 12px; padding-top: 18px; border-top: 1px solid var(--line-soft); margin-top: 8px; }
+.split-foot { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; padding: 14px 20px; background: var(--panel); border-radius: 14px; box-shadow: var(--shadow); }
 .dropbox { background: var(--panel); border-radius: 16px; box-shadow: var(--shadow); border: 2px dashed var(--blue-line); padding: 44px 32px 32px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; transition: all 0.15s; }
 .dropbox.over { border-color: var(--blue); background: var(--blue-tint); }
 .drop-ic { width: 56px; height: 56px; border-radius: 16px; background: var(--blue-soft); color: var(--blue); display: flex; align-items: center; justify-content: center; margin-bottom: 4px; }
