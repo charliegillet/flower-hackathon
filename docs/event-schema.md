@@ -26,11 +26,11 @@ The narrative text also streams as standard Responses events:
 | `bq.run` | `prompt`, `mode` (`sim`/`flower`), `horizon_years` | first event |
 | `bq.stage` | `stage` (`discover`,`bands`,`attest`,`round1`,`round2`,`verdict`), `status` (`start`/`done`), `label` | stage boundaries |
 | `bq.node` | `node_id`, `role`, `name`, `org_kind` (e.g. "Borrower device", "Credit bureau", "Bank"), `model` (string or null), `location` (string or null) | once per discovered node |
-| `bq.msg` | `from`, `to` (node_ids), `kind` (`hello`,`bands_request`,`bands`,`attest_request`,`attestation`,`quote_request`,`quote`,`counter_request`,`counter`), `summary` (short human text), `fields` (list of field names carried), `sealed` (bool: content hidden from other banks) | every grid message out/in (for animation) |
+| `bq.msg` | `from`, `to` (node_ids), `kind` (`hello`,`hello_reply`,`bands_request`,`bands`,`attest_request`,`attestation`,`quote_request`,`quote`,`counter_request`,`counter`), `summary` (short human text), `fields` (list of field names carried), `sealed` (bool: content hidden from other banks) | every grid message out/in (for animation) |
 | `bq.bands` | `bands` {`loan_band`,`ltv_band`,`dti_band`,`occupancy`,`term_years`,`property_state`}, `withheld` (list of raw fields never sent, e.g. `["exact_income","assets","name","exact_credit_score"]`) | borrower node replied |
-| `bq.attest` | `bureau`, `fico_band`, `signature_ok` (bool) | bureau replied |
+| `bq.attest` | `bureau`, `fico_band`, `signature_ok` (`null` until banks verify, then bool), `verified_by` (number of banks whose signature check passed) | bureau replied (`null`), then again after round 1 |
 | `bq.quote` | `bank`, `node_id`, `round`, `model`, `rate` (% e.g. 6.875), `points` (% of loan), `fees` ($), `apr` (% recomputed by coordinator), `apr_stated` (% claimed by bank or null), `monthly_pi` ($), `total_cost` ($ over horizon), `horizon_years`, `note` (bank's short pitch) | each accepted quote |
-| `bq.guard` | `bank`, `node_id`, `round`, `violation` (`requested_fields`/`apr_mismatch`/`outbound_blocked`), `requested` (list), `detail`, `action` (`blocked`/`flagged`) | the guard intervened |
+| `bq.guard` | `bank` (or borrower/bureau name when `round` is 0), `node_id`, `round` (0 = before bidding), `violation` (`requested_fields`/`apr_mismatch`/`outbound_blocked`), `requested` (list), `detail`, `action` (`blocked`/`flagged`) | the guard intervened |
 | `bq.decline` | `bank`, `round`, `reason`, `message` | bank declined to quote or to improve |
 | `bq.improve` | `bank`, `from_total`, `to_total`, `delta` ($ saved, positive), `message` | round-2 improvement |
 | `bq.market` | `pmms_30y` (%), `as_of` (date string), `source` (url) | market context |
