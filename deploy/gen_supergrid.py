@@ -66,8 +66,8 @@ def main() -> None:
     for spec in nodes:
         k, cfg = spec["key"], spec["node_config"]
         print(f'ssh-keygen -t ecdsa -b 384 -N "" -C "{k}" -f keys/{k}')
-        print(f'uvx --from flwr==1.39.0 flwr supernode register keys/{k}.pub supergrid '
-              f'--name="{cfg["name"]}" --location="{spec["latlon"]}"')
+        where = f' --location="{spec["latlon"]}"' if spec.get("latlon") else ""  # borrower stays unlocated
+        print(f'uvx --from flwr==1.39.0 flwr supernode register keys/{k}.pub supergrid --name="{cfg["name"]}"{where}')
     print("# Then create a *deployment* federation and add each SuperNode id to it:")
     print("uvx --from flwr==1.39.0 flwr supernode list supergrid --verbose")
     print("uvx --from flwr==1.39.0 flwr federation add-supernode <supernode-id> @<username>/<federation> supergrid")

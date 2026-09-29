@@ -123,7 +123,7 @@ def test_full_negotiation_story(run_events):
 def test_no_raw_personal_data_in_any_event(run_events):
     events, _ = run_events
     blob = json.dumps(events)
-    for secret in ("Alex Rivera", "210000", "262000", "Stanford Health Care", '"score"', "752"):
+    for secret in ("Alex", "Rivera", "Palo Alto", "210000", "262000", "Stanford Health Care", '"score"', "752"):
         assert secret not in blob, f"raw data leaked into events: {secret}"
     ledger = next(e for e in events if e["type"] == "bq.ledger")
     banks = [p for p in ledger["parties"] if p["role"] == "bank"]

@@ -7,7 +7,7 @@ services:
       - --superlink=fleet-supergrid.flower.ai:443
       - --auth-supernode-private-key=/keys/borrower
       - --allow-runtime-dependency-installation
-      - --node-config=role="borrower" name="Alex's laptop" org_kind="Borrower device" location="Palo Alto, CA" data_dir="/data" hmac_key_file="/secrets/bureau.key"
+      - --node-config=role="borrower" name="Borrower device" org_kind="Your device (anonymous)" data_dir="/data" hmac_key_file="/secrets/bureau.key"
     environment:
       FLWR_MODEL_API_ENDPOINT: "https://api.flower.ai/v1/responses"
       FLWR_MODEL_API_KEY: "${FLWR_MODEL_API_KEY}"

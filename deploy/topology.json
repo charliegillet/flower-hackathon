@@ -6,12 +6,11 @@
       "provider": null,
       "node_config": {
         "role": "borrower",
-        "name": "Alex's laptop",
-        "org_kind": "Borrower device",
-        "location": "Palo Alto, CA",
+        "name": "Borrower device",
+        "org_kind": "Your device (anonymous)",
         "data_dir": "nodes/borrower"
       },
-      "latlon": "37.4419,-122.1430"
+      "latlon": null
     },
     {
       "key": "bureau",
