@@ -2,28 +2,22 @@ import { useState } from 'react';
 import StageAnswers from './StageAnswers.jsx';
 import StageSeal from './StageSeal.jsx';
 import StageBanks from './StageBanks.jsx';
-import { EMPTY_FORM, SAMPLE_FORM } from '../../core/bands.js';
+import { EMPTY_FORM, SAMPLE_FORM, mandateOf } from '../../core/bands.js';
 import { Check, Lock } from './Icons.jsx';
 
 // Prefill from the user's saved profile where the field names line up.
 function fromProfile(user) {
   const p = user?.profile || {};
+  const sum = (o) => Object.values(o || {}).reduce((a, v) => a + (Number(v) || 0), 0);
   return {
     ...EMPTY_FORM,
     fullName: user?.name || '',
     email: user?.email || '',
-    phone: p.personal?.phone || '',
-    dateOfBirth: p.personal?.dateOfBirth || '',
-    street: p.personal?.address?.street || '',
-    city: p.personal?.address?.city || '',
     state: p.personal?.address?.state || '',
-    zip: p.personal?.address?.zip || '',
     annualIncome: p.income?.annualIncome ?? '',
     employmentStatus: p.income?.employmentStatus || 'employed',
-    employer: p.income?.employer || '',
-    yearsEmployed: p.income?.yearsEmployed ?? '',
-    checking: p.assets?.checking ?? '', savings: p.assets?.savings ?? '', investments: p.assets?.investments ?? '', realEstate: p.assets?.realEstate ?? '',
-    monthlyHousing: p.debts?.monthlyHousing ?? '', autoLoans: p.debts?.autoLoans ?? '', studentLoans: p.debts?.studentLoans ?? '', creditCards: p.debts?.creditCards ?? '', otherDebt: p.debts?.other ?? '',
+    monthlyDebt: sum(p.debts) || '',
+    totalAssets: sum(p.assets) || '',
     creditScore: p.credit?.score ?? '',
   };
 }
@@ -67,7 +61,7 @@ export default function TrustFlow({ user, onAccepted, onError }) {
         <StageSeal form={form} onBack={() => setStage('answers')} onApprove={(b) => { setBands(b); setStage('banks'); }} />
       )}
       {stage === 'banks' && bands && (
-        <StageBanks bands={bands} principal={principal} horizonYears={horizonYears} onOpenLedger={() => setLedgerOpen(true)} onAccept={(bank, offer) => onAccepted?.({ form, bands, bank, offer })} />
+        <StageBanks bands={bands} mandate={mandateOf(form)} principal={principal} horizonYears={horizonYears} onOpenLedger={() => setLedgerOpen(true)} onAccept={(bank, offer) => onAccepted?.({ form, bands, bank, offer })} />
       )}
 
       {ledgerOpen && (

@@ -9,7 +9,7 @@ const STATUS = {
   blocked: ['warn', 'Blocked'], quote: ['done', 'Quoted'], improve: ['done', 'Improved'], hold: ['idle', 'Held'],
 };
 
-export default function StageBanks({ bands, principal, horizonYears, onAccept, onOpenLedger }) {
+export default function StageBanks({ bands, mandate = {}, principal, horizonYears, onAccept, onOpenLedger }) {
   const [events, setEvents] = useState([]);
   const [selected, setSelected] = useState(BANKS[0].id);
   const [done, setDone] = useState(null);
@@ -19,9 +19,9 @@ export default function StageBanks({ bands, principal, horizonYears, onAccept, o
     const run = startNegotiation(bands, BANKS, (e) => {
       setEvents((prev) => [...prev, e]);
       if (e.type === 'done') setDone(e);
-    }, { principal, horizonYears });
+    }, { principal, horizonYears, mandate });
     return run.cancel;
-  }, [bands, principal, horizonYears]);
+  }, [bands, principal, horizonYears, mandate]);
 
   useEffect(() => { logRef.current?.scrollTo({ top: 1e6, behavior: 'smooth' }); }, [events, selected]);
 
@@ -40,7 +40,16 @@ export default function StageBanks({ bands, principal, horizonYears, onAccept, o
     return m;
   }, [events]);
 
-  const ranking = useMemo(() => BANKS.filter((b) => byBank[b.id].offer).sort((a, b) => byBank[a.id].offer.total - byBank[b.id].offer.total), [byBank]);
+  const scoreKey = mandate.priority === 'Lowest monthly payment' ? 'monthly' : mandate.priority === 'Least cash at closing' ? 'cash' : mandate.priority === 'Fastest close' ? 'closeDays' : 'total';
+  const score = (o) => (scoreKey === 'cash' ? (o.points / 100) * principal + o.fees : o[scoreKey]);
+  const ranking = useMemo(() => BANKS.filter((b) => byBank[b.id].offer).sort((a, b) => score(byBank[a.id].offer) - score(byBank[b.id].offer)), [byBank, scoreKey]);
+  const checks = (o) => [
+    mandate.maxPayment ? { label: `Payment under $${mandate.maxPayment.toLocaleString()}`, ok: o.monthly <= mandate.maxPayment, val: `$${o.monthly.toLocaleString()}` } : null,
+    mandate.walkAwayRate ? { label: `Rate under ${mandate.walkAwayRate}%`, ok: o.rate < mandate.walkAwayRate, val: `${o.rate.toFixed(3)}%` } : null,
+    mandate.noPrepayPenalty === 'Required' ? { label: 'No prepayment penalty', ok: !o.prepayPenalty, val: o.prepayPenalty ? 'has one' : 'none' } : null,
+    mandate.cashToClose ? { label: `Closing cash under $${mandate.cashToClose.toLocaleString()}`, ok: (o.points / 100) * principal + o.fees <= mandate.cashToClose, val: `$${Math.round((o.points / 100) * principal + o.fees).toLocaleString()}` } : null,
+  ].filter(Boolean);
+  const meetsAll = (o) => checks(o).every((c) => c.ok);
   const leader = ranking[0];
   const round2 = events.find((e) => e.type === 'round2');
   const bank = BANKS.find((b) => b.id === selected);
@@ -111,6 +120,8 @@ export default function StageBanks({ bands, principal, horizonYears, onAccept, o
               <div className="kpi"><span className="k">Fees</span><span className="v">${bs.offer.fees.toLocaleString()}</span></div>
               <div className="kpi"><span className="k">Monthly</span><span className="v">${bs.offer.monthly.toLocaleString()}</span></div>
               <div className="kpi strong"><span className="k">{horizonYears}-year total cost</span><span className="v">${bs.offer.total.toLocaleString()}</span></div>
+              <div className="kpi"><span className="k">Prepay penalty</span><span className="v small">{bs.offer.prepayPenalty ? 'Yes' : 'None'}</span></div>
+              <div className="kpi"><span className="k">Close in</span><span className="v small">{bs.offer.closeDays} days</span></div>
             </div>
           )}
         </div>
@@ -118,7 +129,7 @@ export default function StageBanks({ bands, principal, horizonYears, onAccept, o
         <div className="rankbar">
           <div className="rank-h">
             <b>{done ? 'Final ranking' : 'Live ranking'}</b>
-            <span className="sub">by total cost over the {horizonYears} years you said you'd keep the loan</span>
+            <span className="sub">by {mandate.priority ? mandate.priority.toLowerCase() : 'total cost'}{scoreKey === 'total' ? ` over the ${horizonYears} years you'll keep the loan` : ''}</span>
             <span className="spacer" />
             <span className="tag shared"><Arrow width={11} height={11} />{rows.length} ranges shared</span>
             <span className="tag warn"><Block width={11} height={11} />{blockedTotal} request{blockedTotal === 1 ? '' : 's'} blocked</span>
@@ -136,14 +147,26 @@ export default function StageBanks({ bands, principal, horizonYears, onAccept, o
                   <span className="m">{o.rate.toFixed(3)}%</span>
                   <span className="m">{o.points} pts</span>
                   <span className="m strong">${o.total.toLocaleString()}</span>
-                  <span className="note">{flag ? 'Low rate, high fees. Asked for data it may not see.' : i === 0 ? 'Cheapest over your horizon' : `+$${(o.total - byBank[ranking[0].id].offer.total).toLocaleString()} vs. best`}</span>
+                  <span className="note">{flag ? 'Low rate, high fees. Asked for data it may not see.' : meetsAll(o) ? (i === 0 ? 'Best, and meets everything you asked for' : `Meets everything · +$${(o.total - byBank[ranking[0].id].offer.total).toLocaleString()} vs. best`) : `Misses: ${checks(o).filter((c) => !c.ok).map((c) => c.label.toLowerCase()).join(', ')}`}</span>
                   {i === 0 && done && <span className="accept" onClick={(ev) => { ev.stopPropagation(); onAccept(b, o); }} role="button" tabIndex={0} onKeyDown={(ev) => ev.key === 'Enter' && onAccept(b, o)}>Accept offer</span>}
                 </button>
               );
             })}
           </div>
+          {done && leader && (
+            <div className="report">
+              <div className="report-h"><b>Did you get what you asked for?</b><span className="sub">Checked against the private half of your mandate. Banks never saw these numbers.</span></div>
+              <div className="report-rows">
+                {checks(byBank[leader.id].offer).map((c) => (
+                  <div className={`report-row ${c.ok ? 'ok' : 'miss'}`} key={c.label}>{c.ok ? <Check width={12} height={12} /> : <Block width={12} height={12} />}<span>{c.label}</span><span className="m">{c.val}</span></div>
+                ))}
+                {checks(byBank[leader.id].offer).length === 0 && <div className="sub">You set no hard lines, so the ranking is by {mandate.priority?.toLowerCase() || 'total cost'} alone.</div>}
+              </div>
+              {(() => { const alt = ranking.find((b) => b.id !== leader.id && meetsAll(byBank[b.id].offer)); return !meetsAll(byBank[leader.id].offer) && alt ? <p className="sub report-alt">{alt.name} costs ${(byBank[alt.id].offer.total - byBank[leader.id].offer.total).toLocaleString()} more but meets every condition. Your call.</p> : null; })()}
+            </div>
+          )}
           <div className="rank-f">
-            <span className="sub">{done ? 'Run complete.' : 'Negotiation in progress. Banks hear one number in round 2: the best competing total cost.'}</span>
+            <span className="sub">{done ? 'Run complete.' : `Negotiation in progress. In round 2 banks hear the best competing cost and one ask from your agent.`}</span>
             <span className="spacer" />
             <button type="button" className="btn ghost small" onClick={onOpenLedger}>Open disclosure ledger</button>
           </div>
