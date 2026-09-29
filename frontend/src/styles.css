@@ -396,3 +396,25 @@ label.check input { width: 16px; height: 16px; }
 .see-card { background: var(--panel); border-radius: 16px; box-shadow: var(--shadow); padding: 16px 20px 10px; }
 .see-card .kicker { margin-bottom: 4px; }
 @media (max-width: 1100px) { .split { grid-template-columns: 1fr; } .q { grid-template-columns: 1fr; gap: 2px; } }
+
+/* ---------- Home stage: listings left, seller negotiation right ---------- */
+.home { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 20px; align-items: stretch; }
+.home-l { background: var(--panel); border-radius: 16px; box-shadow: var(--shadow); padding: 26px 28px 20px; display: flex; flex-direction: column; gap: 14px; }
+.home-r { display: flex; flex-direction: column; min-height: 0; }
+.listings { display: flex; flex-direction: column; gap: 8px; }
+.listing { text-align: left; display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--line-soft); background: var(--panel); transition: all 0.15s; }
+.listing:hover { background: var(--paper); }
+.listing.on { border-color: var(--blue); background: var(--blue-tint); }
+.listing-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.listing-mid { display: flex; align-items: baseline; gap: 10px; }
+.listing .m { font-family: var(--mono); font-size: 18px; font-weight: 500; }
+.negotiate { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.negotiate .transcript { max-height: 420px; }
+.deal { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+.kpi.green { background: var(--green-soft); border-color: var(--green-line); }
+.kpi.green .k, .kpi.green .v, .kpi.green .n { color: var(--green); }
+.kpi.blue { background: var(--blue-tint); border-color: var(--blue-line); }
+.kpi.blue .v { color: var(--blue); font-size: 15px; }
+.kpi .n { font-size: 11px; color: var(--muted); }
+.kpis { display: grid; gap: 10px; }
+@media (max-width: 1100px) { .home { grid-template-columns: 1fr; } }

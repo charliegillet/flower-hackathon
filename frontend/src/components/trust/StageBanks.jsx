@@ -36,7 +36,10 @@ export default function StageBanks({ bands, mandate = {}, principal, horizonYear
       if (cancelled) return;
       if (st.available) {
         setEngine('flower');
-        run = startFlowerNegotiation(bands, onEvent, { horizonYears, consentToken });
+        const live = startFlowerNegotiation(bands, onEvent, { horizonYears, consentToken });
+        // Private lenders have no Flower node yet: they run in the browser alongside the live banks.
+        const priv = startNegotiation(bands, BANKS.filter((b) => b.kind === 'private'), onEvent, { principal, horizonYears, mandate });
+        run = { cancel: () => { live.cancel(); priv.cancel(); } };
       } else {
         setEngine('simulated');
         run = startNegotiation(bands, BANKS, onEvent, { principal, horizonYears, mandate });
@@ -83,16 +86,20 @@ export default function StageBanks({ bands, mandate = {}, principal, horizonYear
     <div className="stage stage-banks">
       <aside className="bank-tabs">
         <div className="stage-head">
-          <h2>Banks</h2>
-          <p className="sub">Each bank got the same sealed envelope. Click one to watch its agent.</p>
+          <h2>Lenders</h2>
+          <p className="sub">Six banks and two private lenders got the same sealed envelope. Click one to watch its agent.</p>
           <EngineBadge engine={engine} live={live} />
         </div>
-        {BANKS.map((b) => {
+        {BANKS.map((b, idx) => {
           const s = byBank[b.id];
+          const firstPrivate = b.kind === 'private' && BANKS.findIndex((x) => x.kind === 'private') === idx;
           const [cls, label] = STATUS[s.status] || STATUS.waiting;
           const isLeader = leader?.id === b.id && done;
           return (
-            <button type="button" key={b.id} className={`bank-tab ${selected === b.id ? 'selected' : ''} ${s.blocked ? 'flag' : ''}`} onClick={() => setSelected(b.id)}>
+            <div key={b.id} style={{ display: 'contents' }}>
+            {firstPrivate && <div className="kicker" style={{ padding: '12px 22px 2px' }}>Private lenders</div>}
+            {idx === 0 && <div className="kicker" style={{ padding: '6px 22px 2px' }}>Banks</div>}
+            <button type="button" className={`bank-tab ${selected === b.id ? 'selected' : ''} ${s.blocked ? 'flag' : ''}`} onClick={() => setSelected(b.id)}>
               <Logo bank={b} />
               <span className="txt">
                 <span className="name">{b.name}{isLeader && <span className="tag done" style={{ marginLeft: 6 }}>Best</span>}</span>
@@ -100,6 +107,7 @@ export default function StageBanks({ bands, mandate = {}, principal, horizonYear
               </span>
               <span className={`tag ${cls}`}>{s.status === 'thinking' || s.status === 'sent' ? <Spinner width={11} height={11} /> : null}{label}</span>
             </button>
+            </div>
           );
         })}
         <div className="footnote"><Lock width={12} height={12} /> No bank can see another bank's tab. You can see all of them.</div>

@@ -2,6 +2,8 @@ import { useCallback, useState } from 'react';
 import StageAnswers from './StageAnswers.jsx';
 import StageSeal from './StageSeal.jsx';
 import StageBanks from './StageBanks.jsx';
+import StageHome from './StageHome.jsx';
+import { computeBands } from '../../core/bands.js';
 import { EMPTY_FORM, SAMPLE_FORM, mandateOf } from '../../core/bands.js';
 import { Check, Lock } from './Icons.jsx';
 
@@ -25,7 +27,8 @@ function fromProfile(user) {
 const STAGES = [
   { key: 'answers', n: 1, label: 'Your answers' },
   { key: 'seal', n: 2, label: 'Sealing' },
-  { key: 'banks', n: 3, label: 'Banks' },
+  { key: 'home', n: 3, label: 'Home', homeOnly: true },
+  { key: 'banks', n: 4, label: 'Lenders' },
 ];
 
 export default function TrustFlow({ user, onAccepted, onError }) {
@@ -36,7 +39,9 @@ export default function TrustFlow({ user, onAccepted, onError }) {
   // Disclosure ledger recorded by the real Flower run (null = show the policy summary).
   const [ledger, setLedger] = useState(null);
   const onLedger = useCallback((parties) => setLedger(parties), []);
-  const reached = STAGES.findIndex((s) => s.key === stage);
+  const stages = STAGES.filter((s) => !s.homeOnly || form.purpose === 'home').map((s, i) => ({ ...s, n: i + 1 }));
+  const reached = stages.findIndex((s) => s.key === stage);
+  const [deal, setDeal] = useState(null);
 
   const principal = Number(form.amount) || 0;
   const horizonYears = Number(form.horizonYears) || 7;
@@ -44,10 +49,10 @@ export default function TrustFlow({ user, onAccepted, onError }) {
   return (
     <div className="trust-flow">
       <div className="tabstrip" role="tablist" aria-label="Application stages">
-        {STAGES.map((s, i) => {
+        {stages.map((s, i) => {
           const state = i < reached ? 'done' : i === reached ? 'current' : 'todo';
           return (
-            <button type="button" role="tab" aria-selected={state === 'current'} key={s.key} className={`stage-tab ${state}`} disabled={state === 'todo'} onClick={() => { if (state === 'done' && s.key === 'answers') { setStage('answers'); setBands(null); } }}>
+            <button type="button" role="tab" aria-selected={state === 'current'} key={s.key} className={`stage-tab ${state}`} disabled={state === 'todo'} onClick={() => { if (state === 'done' && s.key === 'answers') { setStage('answers'); setBands(null); setDeal(null); } }}>
               <span className="num">{state === 'done' ? <Check width={12} height={12} /> : s.n}</span>
               <span className="lbl">{s.label}</span>
             </button>
@@ -61,7 +66,22 @@ export default function TrustFlow({ user, onAccepted, onError }) {
         <StageAnswers form={form} setForm={setForm} onSeal={() => setStage('seal')} onFillSample={() => setForm(SAMPLE_FORM)} />
       )}
       {stage === 'seal' && (
-        <StageSeal form={form} onBack={() => setStage('answers')} onApprove={(b) => { setBands(b); setStage('banks'); }} />
+        <StageSeal form={form} onBack={() => setStage('answers')} onApprove={(b) => { setBands(b); setStage(form.purpose === 'home' ? 'home' : 'banks'); }} />
+      )}
+      {stage === 'home' && bands && (
+        <StageHome
+          form={form}
+          bands={bands}
+          onSkip={() => setStage('banks')}
+          onDone={(d) => {
+            // The home agent's result feeds the lenders: same token, new price and loan, new ranges.
+            const next = { ...form, propertyPrice: d.price, amount: d.loan };
+            setForm(next);
+            setDeal(d);
+            setBands(computeBands({ ...next, _token: bands.token }));
+            setStage('banks');
+          }}
+        />
       )}
       {stage === 'banks' && bands && (
         <StageBanks bands={bands} mandate={mandateOf(form)} principal={principal} horizonYears={horizonYears} consentToken={form._consentToken || null} onLedger={onLedger} onOpenLedger={() => setLedgerOpen(true)} onAccept={(bank, offer) => onAccepted?.({ form, bands, bank, offer })} />
