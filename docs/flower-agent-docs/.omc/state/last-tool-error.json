@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"cat tutorials_build-a-research-agent.md; echo ======; sed -n 1,192p how-to-guides_troubleshoot-agent-runs.md | grep -v '^$' | head -150\",\"description\":\"Print research-agent tutorial and tr...",
+  "error": "Exit code 1\n# Build a research agent\n\nBuild an AgentApp that searches and fetches public web sources over a bounded\nnumber of tool-call rounds. It replays earlier conversation turns and can\nrecover from connector failures.\n\nThe finished project uses:\n\n- the OpenAI SDK for model requests\n- `agent.connectors.tools` for runtime-provided schemas\n- `agent.connectors.call` for function calls\n- `agent.events.emit` for frontend-visible model events\n- `agent.events.get_trace` for conversation history\n\nIt...",
+  "timestamp": "2026-09-29T18:43:24.687Z",
+  "retry_count": 1
+}
