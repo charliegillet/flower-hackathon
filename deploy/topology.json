@@ -1,0 +1,35 @@
+{
+  "_comment": "Single source of truth for the six BlindQuote SuperNodes. data_dir is relative to the repo root locally and mounted at /data/<node> in containers. provider selects the upstream model for that node.",
+  "nodes": [
+    {
+      "key": "borrower",
+      "provider": null,
+      "node_config": {"role": "borrower", "name": "Alex's laptop", "org_kind": "Borrower device", "location": "Palo Alto, CA", "data_dir": "nodes/borrower"}
+    },
+    {
+      "key": "bureau",
+      "provider": null,
+      "node_config": {"role": "bureau", "name": "Pacific Credit Bureau", "org_kind": "Credit bureau", "location": "Costa Mesa, CA", "data_dir": "nodes/bureau"}
+    },
+    {
+      "key": "bank-a",
+      "provider": "flower",
+      "node_config": {"role": "bank", "name": "Cardinal Bank", "org_kind": "Regional bank", "location": "San Jose, CA", "model": "flwrlabs/endeavor-1.0", "data_dir": "nodes/bank-a"}
+    },
+    {
+      "key": "bank-b",
+      "provider": "nebius-kimi",
+      "node_config": {"role": "bank", "name": "Golden Gate Credit Union", "org_kind": "Credit union", "location": "San Francisco, CA", "model": "dedicated/flowerai/Kimi-K2.7-Code-1OUHWL", "data_dir": "nodes/bank-b"}
+    },
+    {
+      "key": "bank-c",
+      "provider": "nebius-minimax",
+      "node_config": {"role": "bank", "name": "Bay Mortgage Co.", "org_kind": "Online lender", "location": "Oakland, CA", "model": "dedicated/flowerai/MiniMax-M3-OOLI9o", "data_dir": "nodes/bank-c"}
+    },
+    {
+      "key": "bank-d",
+      "provider": "nebius-kimi",
+      "node_config": {"role": "bank", "name": "Rapid Lending Co.", "org_kind": "Non-bank lender", "location": "Las Vegas, NV", "model": "dedicated/flowerai/Kimi-K2.7-Code-1OUHWL", "data_dir": "nodes/bank-d"}
+    }
+  ]
+}
