@@ -81,6 +81,18 @@ class Coordinator:
                     on_reply(dst, decode(rep.get("payload")))
         return list(pending.values())
 
+    def _isolated(self, states: dict[str, BankState], rnd: int, handler: Callable[[str, dict[str, Any]], None]) -> Callable[[str, dict[str, Any]], None]:
+        """One misbehaving bank declines; it never crashes the negotiation."""
+
+        def wrapped(nid: str, msg: dict[str, Any]) -> None:
+            try:
+                handler(nid, msg)
+            except Exception as exc:  # noqa: BLE001
+                self.ev.emit("bq.decline", bank=states[nid].name, round=rnd, reason="invalid reply",
+                             message=f"reply rejected ({type(exc).__name__})")
+
+        return wrapped
+
     def _of_role(self, role: str) -> list[str]:
         return [nid for nid, n in self.nodes.items() if n.get("role") == role]
 
@@ -200,13 +212,23 @@ class Coordinator:
     def _accept_offer(self, st: BankState, msg: dict[str, Any], bands: dict[str, Any], rnd: int) -> dict[str, Any] | None:
         """Validate a bank's options, recompute APR, emit guard flags; return the best option."""
         loan = float(bands["loan_mid"])
-        options = msg.get("options") or []
+        options = msg.get("options")
+        if not isinstance(options, list):
+            return None
         best = None
         for opt in options:
+            if not isinstance(opt, dict):
+                continue
             try:
-                o = pricing.make_offer(loan, float(opt["rate"]), float(opt["points"]), float(opt["fees"]),
-                                       int(bands["horizon_years"]), int(bands.get("term_years", 30)))
+                rate, points, fees = float(opt["rate"]), float(opt["points"]), float(opt["fees"])
             except (KeyError, TypeError, ValueError):
+                continue
+            # Sanity ranges: a bank cannot win with an impossible offer.
+            if not (0 < rate < 20 and 0 <= points <= 10 and 0 <= fees <= 50_000):
+                continue
+            try:
+                o = pricing.make_offer(loan, rate, points, fees, int(bands["horizon_years"]), int(bands.get("term_years", 30)))
+            except ArithmeticError:
                 continue
             if best is None or o.total_cost < best.total_cost:
                 best = o
@@ -271,7 +293,7 @@ class Coordinator:
 
         sends = [(nid, {"kind": "quote_request", "session": self.session, "bands": wire_bands, "attestation": att, "round": 1})
                  for nid in states]
-        for nid in self._exchange(sends, self.t.quote, on_reply):
+        for nid in self._exchange(sends, self.t.quote, self._isolated(states, 1, on_reply)):
             ev.emit("bq.decline", bank=states[nid].name, round=1, reason="timeout", message="No reply before the deadline")
         ev.stage("round1", "done", f"{sum(1 for s in states.values() if s.round1)} sealed quotes")
 
@@ -318,7 +340,7 @@ class Coordinator:
             ev.emit("bq.quote", bank=st.name, node_id=nid, round=2, model=st.model,
                     horizon_years=bands["horizon_years"], **offer)
 
-        for nid in self._exchange(sends, self.t.counter, on_reply):
+        for nid in self._exchange(sends, self.t.counter, self._isolated(live, 2, on_reply)):
             ev.emit("bq.decline", bank=live[nid].name, round=2, reason="timeout", message="No reply before the deadline")
         ev.stage("round2", "done", "Negotiation closed")
 
