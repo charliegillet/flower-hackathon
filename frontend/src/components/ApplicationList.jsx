@@ -1,34 +1,25 @@
-export default function ApplicationList({ applications, onSelect }) {
-  if (applications.length === 0) {
-    return <p className="muted">No applications yet.</p>;
-  }
+// Compact list pane — like an inbox folder listing.
+export default function ApplicationList({ applications, selectedId, onSelect }) {
   return (
-    <div className="card">
-      <h2>Applications</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Applicant</th>
-            <th>Loan</th>
-            <th>Status</th>
-            <th>Submitted</th>
-          </tr>
-        </thead>
-        <tbody>
-          {applications.map((a) => (
-            <tr key={a._id} onClick={() => onSelect(a._id)}>
-              <td>{a.applicant.name}</td>
-              <td>
-                ${a.loan.amount.toLocaleString()} · {a.loan.purpose}
-              </td>
-              <td>
-                <span className={`badge ${a.status}`}>{a.status}</span>
-              </td>
-              <td>{new Date(a.createdAt).toLocaleString()}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="list-pane">
+      <div className="list-head">Applications</div>
+      {applications.length === 0 && <p className="muted padded">No applications yet.</p>}
+      {applications.map((a) => (
+        <button
+          key={a._id}
+          className={`list-item ${a._id === selectedId ? 'active' : ''}`}
+          onClick={() => onSelect(a._id)}
+        >
+          <div className="list-item-top">
+            <strong>{a.applicant.name}</strong>
+            <span className={`badge ${a.status}`}>{a.status}</span>
+          </div>
+          <div className="list-item-sub">
+            ${a.loan.amount.toLocaleString()} · {a.loan.purpose}
+          </div>
+          <div className="list-item-date">{new Date(a.createdAt).toLocaleDateString()}</div>
+        </button>
+      ))}
     </div>
   );
 }

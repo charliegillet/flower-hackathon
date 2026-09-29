@@ -7,10 +7,24 @@ import ApplicationForm from './components/ApplicationForm.jsx';
 import ApplicationList from './components/ApplicationList.jsx';
 import ApplicationDetail from './components/ApplicationDetail.jsx';
 
+const NAV = {
+  customer: [
+    { key: 'apply', label: 'New application', icon: '📝' },
+    { key: 'applications', label: 'My applications', icon: '📂' },
+    { key: 'profile', label: 'Profile', icon: '👤' },
+    { key: 'settings', label: 'Settings', icon: '⚙️' },
+  ],
+  bank: [
+    { key: 'applications', label: 'All applications', icon: '📂' },
+    { key: 'profile', label: 'Profile', icon: '👤' },
+    { key: 'settings', label: 'Settings', icon: '⚙️' },
+  ],
+};
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(Boolean(getToken()));
-  const [view, setView] = useState('apply');
+  const [view, setView] = useState('applications');
   const [applications, setApplications] = useState([]);
   const [selected, setSelected] = useState(null);
   const [error, setError] = useState('');
@@ -42,7 +56,6 @@ export default function App() {
 
   const openDetail = async (id) => {
     setSelected(await api.getApplication(id));
-    setView('detail');
   };
 
   const logout = () => {
@@ -50,88 +63,109 @@ export default function App() {
     setUser(null);
     setApplications([]);
     setSelected(null);
-    setView('apply');
   };
 
-  if (loading) return <div className="app">Loading…</div>;
+  if (loading) return <div className="app-loading">Loading…</div>;
 
   if (!user) {
     return (
-      <div className="app">
-        <header>
+      <div className="auth-page">
+        <div className="auth-brand">
           <h1>flower-finance</h1>
-        </header>
+          <p>Agent-negotiated loans</p>
+        </div>
         <AuthForm
           onAuth={(u) => {
             setUser(u);
-            setView(u.role === 'bank' ? 'list' : 'apply');
+            setView(u.role === 'bank' ? 'applications' : 'apply');
           }}
         />
       </div>
     );
   }
 
+  const nav = NAV[user.role] || NAV.customer;
+
   return (
-    <div className="app">
-      <header>
-        <h1>flower-finance</h1>
-        <nav>
-          {!isBank && (
-            <button className={view === 'apply' ? 'active' : ''} onClick={() => setView('apply')}>
-              Apply for a loan
+    <div className="layout">
+      <aside className="sidebar">
+        <div className="brand">
+          <span className="brand-mark">🌸</span>
+          <span className="brand-name">flower-finance</span>
+        </div>
+
+        <nav className="menu">
+          {nav.map((item) => (
+            <button
+              key={item.key}
+              className={`menu-item ${view === item.key ? 'active' : ''}`}
+              onClick={() => setView(item.key)}
+            >
+              <span className="menu-icon">{item.icon}</span>
+              <span className="menu-label">{item.label}</span>
+              {item.key === 'applications' && applications.length > 0 && (
+                <span className="menu-count">{applications.length}</span>
+              )}
             </button>
-          )}
-          <button
-            className={view === 'list' ? 'active' : ''}
-            onClick={() => {
-              setView('list');
-              refresh();
-            }}
-          >
-            {isBank ? 'All applications' : 'My applications'} ({applications.length})
-          </button>
-          <button className={view === 'profile' ? 'active' : ''} onClick={() => setView('profile')}>
-            Profile
-          </button>
-          <button className={view === 'settings' ? 'active' : ''} onClick={() => setView('settings')}>
-            Settings
-          </button>
-          <button onClick={logout}>Log out</button>
+          ))}
         </nav>
-      </header>
 
-      {error && <p className="error">{error}</p>}
+        <div className="sidebar-user">
+          <div className="avatar">{user.name?.[0]?.toUpperCase()}</div>
+          <div className="sidebar-user-info">
+            <strong>{user.name}</strong>
+            <span>{isBank ? user.bankName || 'Bank reviewer' : 'Loan applicant'}</span>
+          </div>
+          <button className="logout" title="Log out" onClick={logout}>
+            ⏻
+          </button>
+        </div>
+      </aside>
 
-      <main>
+      <section className="content">
+        {error && <p className="error">{error}</p>}
+
         {view === 'apply' && !isBank && (
           <ApplicationForm
             user={user}
             onSubmitted={(app) => {
               setSelected(app);
-              setView('detail');
+              setView('applications');
               refresh();
             }}
             onError={setError}
           />
         )}
-        {view === 'list' && <ApplicationList applications={applications} onSelect={openDetail} />}
-        {view === 'detail' && selected && (
-          <ApplicationDetail
-            application={selected}
-            user={user}
-            onBack={() => {
-              setView('list');
-              refresh();
-            }}
-            onUpdated={(app) => {
-              setSelected(app);
-              refresh();
-            }}
-          />
+
+        {view === 'applications' && (
+          <div className="mail-pane">
+            <ApplicationList
+              applications={applications}
+              selectedId={selected?._id}
+              onSelect={openDetail}
+            />
+            <div className="reading-pane">
+              {selected ? (
+                <ApplicationDetail
+                  application={selected}
+                  user={user}
+                  onUpdated={(app) => {
+                    setSelected(app);
+                    refresh();
+                  }}
+                />
+              ) : (
+                <div className="empty-pane">
+                  <p>Select an application to view the negotiation</p>
+                </div>
+              )}
+            </div>
+          </div>
         )}
+
         {view === 'profile' && <Profile user={user} onSaved={setUser} />}
         {view === 'settings' && <Settings user={user} onSaved={setUser} />}
-      </main>
+      </section>
     </div>
   );
 }

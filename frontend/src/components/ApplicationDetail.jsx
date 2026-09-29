@@ -97,7 +97,7 @@ function Conversation({ messages }) {
   );
 }
 
-export default function ApplicationDetail({ application, user, onBack, onUpdated }) {
+export default function ApplicationDetail({ application, user, onUpdated }) {
   const [busy, setBusy] = useState(false);
   const isBank = user.role === 'bank';
 
@@ -112,10 +112,7 @@ export default function ApplicationDetail({ application, user, onBack, onUpdated
 
   const { applicant, loan } = application;
   return (
-    <div className="card">
-      <button onClick={onBack} className="link">
-        ← Back to list
-      </button>
+    <div className="detail">
       <h2>
         {applicant.name} — ${loan.amount.toLocaleString()} {loan.purpose} loan
       </h2>
