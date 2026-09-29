@@ -18,6 +18,7 @@ from ..grid import Grid
 from ..ledger import Ledger
 from ..llm import LLM
 from ..market import market_context
+from ..intake import IntakeError, normalize, parse_request
 from ..protocol import GuardViolation, check, decode, encode, requested_fields_violation
 
 COORD = "coordinator"
@@ -133,22 +134,31 @@ class Coordinator:
     # ------------------------------------------------------------------- run
     def run(self, prompt: str) -> dict[str, Any]:
         ev = self.ev
-        horizon_hint = _horizon_from_prompt(prompt)
-        ev.emit("bq.run", prompt=prompt, mode=self.mode, horizon_years=horizon_hint)
+        request = parse_request(prompt)
+        horizon_hint = None if request else _horizon_from_prompt(prompt)
+        # Never echo a structured request back: it carries the consent token.
+        ev.emit("bq.run", prompt="(bands from the borrower's device)" if request else prompt,
+                mode=self.mode, horizon_years=horizon_hint)
         ev.emit("bq.node", node_id=COORD, role="coordinator", name="BlindQuote Coordinator",
                 org_kind="Neutral broker (SuperGrid)", model=self.llm.model, location=None)
         self.ledger.party("BlindQuote Coordinator", "coordinator")
 
         self._discover()
         borrowers, bureaus, banks = self._of_role("borrower"), self._of_role("bureau"), self._of_role("bank")
-        if not borrowers or not bureaus or not banks:
+        if not banks or not bureaus or not (borrowers or request):
             raise RuntimeError(
-                f"Need a borrower, a bureau and at least one bank node; found "
+                f"Need a bureau, at least one bank and a borrower (node or device bands); found "
                 f"{len(borrowers)} borrower, {len(bureaus)} bureau, {len(banks)} bank"
             )
 
-        bands, token = self._bands(borrowers[0], horizon_hint)
-        attestation = self._attest(bureaus[0], token)
+        if request is not None:
+            bands, token, claimed = self._device_bands(request)
+            attestation = self._attest(bureaus[0], token, fallback_band=claimed)
+            if attestation is None:  # bureau has no file: banks price a self-reported band
+                bands["fico_self_reported"] = claimed
+        else:
+            bands, token = self._bands(borrowers[0], horizon_hint)
+            attestation = self._attest(bureaus[0], token)
         states = {nid: BankState(nid, self.nodes[nid]["name"], self.nodes[nid].get("model")) for nid in banks}
         self._round1(states, bands, attestation)
         self._round2(states, bands, attestation)
@@ -222,7 +232,26 @@ class Coordinator:
         ev.stage("bands", "done", "Only bands left the borrower device")
         return bands, str(out["token"])
 
-    def _attest(self, bureau: str, token: str) -> dict[str, Any]:
+    def _device_bands(self, request: dict[str, Any]) -> tuple[dict[str, Any], str | None, str]:
+        """Bands computed on the borrower's own device (browser); nothing raw arrives."""
+        ev = self.ev
+        ev.stage("bands", "start", "Bands arrive from the borrower's device")
+        try:
+            bands, token, horizon, claimed = normalize(request)
+        except IntakeError as exc:
+            raise RuntimeError(f"Cannot price this request: {exc}") from exc
+        self.horizon = horizon
+        shown = {k: bands[k] for k in ("loan_band", "ltv_band", "dti_band", "occupancy", "term_years") if k in bands}
+        ev.emit("bq.bands", bands=shown, withheld=["name", "exact income", "assets", "exact credit score",
+                                                   "monthly debts", "employer", "address", "stay horizon"])
+        for item in (f"loan {bands['loan_band']}", f"LTV {bands['ltv_band']}", f"DTI {bands['dti_band']}"):
+            self.ledger.learn("BlindQuote Coordinator", item)
+        self.ledger.party("Your device", "borrower")
+        self.ledger.learn("Your device", "every quote and the final ranking")
+        ev.stage("bands", "done", "Only bands left your device")
+        return bands, token, claimed
+
+    def _attest(self, bureau: str, token: str | None, fallback_band: str | None = None) -> dict[str, Any] | None:
         ev = self.ev
         ev.stage("attest", "start", "Credit bureau attests the credit band")
         ev.msg(COORD, bureau, "attest_request", "Attest credit band for consent token", ["token"])
@@ -239,7 +268,24 @@ class Coordinator:
                 raise RuntimeError("Bureau reply blocked by guard") from exc
             out.update(msg)
 
-        self._exchange([(bureau, {"kind": "attest_request", "session": self.session, "token": token})], self.t.attest, on_reply)
+        if fallback_band is not None:
+            # Device-bands mode: a missing bureau file is not fatal; the band stays self-reported.
+            strict = on_reply
+
+            def on_reply(nid: str, msg: dict[str, Any]) -> None:  # noqa: F811
+                if msg.get("kind") == "attestation":
+                    strict(nid, msg)
+
+        if token:
+            self._exchange([(bureau, {"kind": "attest_request", "session": self.session, "token": token})],
+                           self.t.attest, on_reply)
+        if not out and fallback_band is not None:
+            self.bureau_name = self.nodes[bureau]["name"]
+            ev.emit("bq.attest", bureau=self.bureau_name, fico_band=fallback_band, signature_ok=None, verified_by=0,
+                    self_reported=True)
+            self.ledger.learn("BlindQuote Coordinator", f"FICO band {fallback_band} (self-reported)")
+            ev.stage("attest", "done", f"No bureau file: FICO band {fallback_band} stays self-reported")
+            return None
         if not out:
             raise RuntimeError("Bureau node did not reply in time")
         # Banks get a session-bound, expiring attestation, never the consent token.
@@ -312,8 +358,9 @@ class Coordinator:
         wire_bands = {k: bands[k] for k in bands}
         for nid in states:
             ev.msg(COORD, nid, "quote_request", "Sealed quote request", ["bands", "attestation"], sealed=True)
-            for item in (f"loan {bands['loan_band']}", f"LTV {bands['ltv_band']}", f"DTI {bands['dti_band']}",
-                         f"FICO band {att['fico_band']} (attested for this session only)"):
+            credit = (f"FICO band {att['fico_band']} (attested for this session only)" if att
+                      else f"FICO band {bands.get('fico_self_reported')} (self-reported)")
+            for item in (f"loan {bands['loan_band']}", f"LTV {bands['ltv_band']}", f"DTI {bands['dti_band']}", credit):
                 self.ledger.learn(states[nid].name, item)
 
         def on_reply(nid: str, msg: dict[str, Any]) -> None:
@@ -347,7 +394,7 @@ class Coordinator:
         for nid in self._exchange(sends, self.t.quote, self._isolated(states, 1, on_reply)):
             ev.emit("bq.decline", bank=states[nid].name, round=1, reason="timeout", message="No reply before the deadline")
         reported = [st.attested for st in states.values() if st.attested is not None]
-        if reported:
+        if reported and att:
             ev.emit("bq.attest", bureau=self.bureau_name, fico_band=att["fico_band"],
                     signature_ok=all(reported), verified_by=sum(reported))
         ev.stage("round1", "done", f"{sum(1 for s in states.values() if s.round1)} sealed quotes")

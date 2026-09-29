@@ -86,6 +86,9 @@ def handle(msg: dict[str, Any], cfg: dict[str, Any], llm: LLM) -> dict[str, Any]
     if kind not in {"quote_request", "counter_request"}:
         return {"kind": "error", "message": f"bank cannot handle {kind!r}"}
     reply_kind = "quote" if kind == "quote_request" else "counter"
+    if fico is None and msg.get("attestation") is None and bands.get("fico_self_reported"):
+        # No bureau file: price the borrower's self-reported band with an unverified-credit charge.
+        fico = str(bands["fico_self_reported"])
     if fico is None:
         extra = {"eligible": False, "reason": "credit attestation did not verify"} if reply_kind == "quote" else {
             "decision": "hold", "note": "credit attestation did not verify"}
