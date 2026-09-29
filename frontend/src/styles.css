@@ -440,3 +440,120 @@ label.check input { width: 16px; height: 16px; }
 .approval-col .row.muted { color: var(--muted); }
 .approval-foot { display: flex; align-items: center; gap: 10px; padding-top: 12px; }
 .approval-foot .btn { display: inline-flex; align-items: center; gap: 6px; }
+
+/* =====================================================================
+   Motion: the page should feel alive, never busy.
+   ===================================================================== */
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes stamp { 0% { opacity: 0; transform: scale(1.6) rotate(-6deg); } 60% { opacity: 1; transform: scale(0.96) rotate(1deg); } 100% { transform: scale(1) rotate(0); } }
+@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(30, 75, 134, 0.35); } 100% { box-shadow: 0 0 0 10px rgba(30, 75, 134, 0); } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes glow { 0%, 100% { opacity: 0.55; } 50% { opacity: 0.9; } }
+@keyframes tick { from { transform: translateY(-8px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes slide-l { from { opacity: 0; transform: translateX(-14px); } to { opacity: 1; transform: none; } }
+@keyframes slide-r { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+@keyframes drift { 0% { transform: translate(0, 0); } 50% { transform: translate(18px, -12px); } 100% { transform: translate(0, 0); } }
+
+/* soft light behind the page */
+.content { position: relative; }
+.content::before { content: ''; position: fixed; top: -160px; left: 320px; width: 620px; height: 620px; border-radius: 50%; background: radial-gradient(closest-side, rgba(133, 166, 242, 0.22), rgba(133, 166, 242, 0)); pointer-events: none; z-index: 0; animation: drift 18s ease-in-out infinite; }
+.content > * { position: relative; z-index: 1; }
+
+/* staggered entrances */
+.split-l, .split-r > *, .tile, .home-l, .home-r > *, .bank-tabs, .bank-main > *, .seal-col > *, .answers-col { animation: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.split-r > *, .home-r > *, .bank-main > * { animation-delay: 0.08s; }
+.seal-col > :nth-child(2) { animation-delay: 0.14s; }
+.bank-tab { animation: slide-l 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.bank-tab:nth-of-type(1) { animation-delay: 0.05s; } .bank-tab:nth-of-type(2) { animation-delay: 0.1s; } .bank-tab:nth-of-type(3) { animation-delay: 0.15s; }
+.bank-tab:nth-of-type(4) { animation-delay: 0.2s; } .bank-tab:nth-of-type(5) { animation-delay: 0.25s; } .bank-tab:nth-of-type(6) { animation-delay: 0.3s; }
+.bank-tab:nth-of-type(7) { animation-delay: 0.35s; } .bank-tab:nth-of-type(8) { animation-delay: 0.4s; }
+.listing:nth-child(1) { animation: rise 0.45s 0.05s both; } .listing:nth-child(2) { animation: rise 0.45s 0.12s both; } .listing:nth-child(3) { animation: rise 0.45s 0.19s both; }
+.qs .q { animation: rise 0.35s both; }
+.qs .q:nth-child(2) { animation-delay: 0.03s; } .qs .q:nth-child(3) { animation-delay: 0.06s; } .qs .q:nth-child(4) { animation-delay: 0.09s; }
+.qs .q:nth-child(6) { animation-delay: 0.12s; } .qs .q:nth-child(7) { animation-delay: 0.15s; } .qs .q:nth-child(8) { animation-delay: 0.18s; }
+.qs .q:nth-child(10) { animation-delay: 0.21s; } .qs .q:nth-child(11) { animation-delay: 0.24s; } .qs .q:nth-child(13) { animation-delay: 0.27s; } .qs .q:nth-child(14) { animation-delay: 0.3s; }
+
+/* chat and steps */
+.transcript .msg.in, .transcript .msg.coord, .transcript .msg.blocked { animation: slide-l 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.transcript .msg.out, .transcript .msg.think, .transcript .msg.request { animation: slide-r 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.wl { animation: slide-l 0.3s both; }
+.band-row { animation: rise 0.3s both; }
+
+/* alive states */
+.tag.work { animation: pulse-ring 1.6s ease-out infinite; }
+.strip-i .tick { display: inline-block; animation: tick 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.status i, .pill .dot { animation: glow 1.4s ease-in-out infinite; }
+.bank-tab .st:empty::after, .waiting { background: linear-gradient(90deg, transparent, rgba(30,75,134,0.06), transparent); background-size: 200% 100%; animation: shimmer 1.6s linear infinite; }
+.tag.done, .tag.sealed, .mark.verified, .env-h b { animation: stamp 0.45s cubic-bezier(0.2, 0.9, 0.2, 1.2) both; }
+.srow .v.blur { transition: filter 0.6s ease, color 0.6s ease; }
+.srow.active { box-shadow: inset 3px 0 0 var(--blue); }
+
+/* touch: hover lift and press */
+.tile, .listing, .bank-tab, .rank-row, .doc, .kpi { transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease; }
+.listing:hover, .bank-tab:hover, .rank-row:hover { transform: translateY(-1px); box-shadow: 0 8px 20px -12px rgba(11, 13, 18, 0.25); }
+.btn, button[type='submit'] { transition: transform 0.12s ease, background 0.15s ease, box-shadow 0.15s ease; }
+.btn:active, button[type='submit']:active { transform: scale(0.97); }
+.btn.primary { box-shadow: 0 6px 18px -8px rgba(30, 75, 134, 0.6); }
+.btn.primary:hover { transform: translateY(-1px); box-shadow: 0 10px 22px -8px rgba(30, 75, 134, 0.6); }
+.stage-tab { transition: color 0.2s ease, border-color 0.25s ease; }
+.stage-tab.current .num { animation: stamp 0.4s both; }
+.approval { animation: rise 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.scrim { animation: fade 0.2s both; }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+.dropbox { transition: border-color 0.2s, background 0.2s, transform 0.2s; }
+.dropbox.over { transform: scale(1.01); }
+.drop-ic { animation: glow 2.4s ease-in-out infinite; }
+.logo { transition: transform 0.2s ease; }
+.bank-tab.selected .logo { transform: scale(1.08); }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.001s !important; animation-iteration-count: 1 !important; transition-duration: 0.001s !important; } }
+
+/* ---------- Stripe-style: one living gradient, still everything else ---------- */
+@keyframes aurora { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.trust-flow { position: relative; }
+.trust-flow::before { content: ''; position: absolute; left: -24px; right: -24px; top: -20px; height: 260px; z-index: 0; pointer-events: none; border-radius: 24px;
+  background: linear-gradient(115deg, rgba(133,166,242,0.28), rgba(196,181,253,0.30), rgba(147,197,253,0.22), rgba(255,255,255,0) 70%); background-size: 260% 260%; animation: aurora 16s ease-in-out infinite;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, rgba(0,0,0,0.6) 55%, transparent 100%); mask-image: linear-gradient(to bottom, #000 0%, rgba(0,0,0,0.6) 55%, transparent 100%); }
+.trust-flow > * { position: relative; z-index: 1; }
+.tabstrip { background: rgba(255,255,255,0.7); backdrop-filter: blur(10px); border-radius: 12px; padding: 0 12px; border: 1px solid rgba(255,255,255,0.8); }
+.drop-ic, .env-h > svg, .card-h .ic { animation: float 4.5s ease-in-out infinite; }
+.split-l, .split-r > .dropbox, .home-l, .bank-detail, .work, .summary, .card.negotiate { box-shadow: 0 1px 2px rgba(11,13,18,0.04), 0 24px 48px -28px rgba(30,75,134,0.35); }
+.content::before { display: none; }
+
+/* ---------- Visibly alive: a real color field, always-on ambient motion ---------- */
+@keyframes shine { 0% { background-position: 200% 50%; } 100% { background-position: -200% 50%; } }
+@keyframes blob { 0% { transform: translate(0, 0) scale(1); } 33% { transform: translate(80px, 30px) scale(1.15); } 66% { transform: translate(-40px, 60px) scale(0.95); } 100% { transform: translate(0, 0) scale(1); } }
+@keyframes bob { 0%, 100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-5px) rotate(1deg); } }
+@keyframes breathe { 0%, 100% { transform: scale(1); opacity: 0.85; } 50% { transform: scale(1.12); opacity: 1; } }
+
+.trust-flow::before { height: 340px; top: -40px; filter: blur(28px); opacity: 0.9;
+  background: linear-gradient(110deg, rgba(96, 140, 255, 0.55) 0%, rgba(188, 150, 255, 0.55) 30%, rgba(255, 176, 140, 0.45) 55%, rgba(120, 200, 255, 0.5) 80%, rgba(255,255,255,0) 100%);
+  background-size: 300% 300%; animation: aurora 12s ease-in-out infinite;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, rgba(0,0,0,0.8) 45%, transparent 100%); mask-image: linear-gradient(to bottom, #000 0%, rgba(0,0,0,0.8) 45%, transparent 100%); }
+.trust-flow::after { content: ''; position: absolute; right: 8%; top: -60px; width: 360px; height: 360px; border-radius: 50%; z-index: 0; pointer-events: none; filter: blur(40px);
+  background: radial-gradient(closest-side, rgba(255, 190, 150, 0.6), rgba(255, 190, 150, 0)); animation: blob 14s ease-in-out infinite; }
+.tabstrip { background: rgba(255,255,255,0.55); border: 1px solid rgba(255,255,255,0.9); box-shadow: 0 8px 30px -18px rgba(30,75,134,0.4); }
+.stage-tab.current { border-bottom-color: transparent; background-image: linear-gradient(90deg, var(--blue), #8b5cf6, var(--blue)); background-size: 200% 2px; background-repeat: no-repeat; background-position: 0 100%; animation: shine 3s linear infinite; }
+
+/* greeting shimmer */
+.split-h h2, .stage-head h2, .home-l .split-h h2 { background: linear-gradient(90deg, var(--ink) 0%, var(--ink) 35%, var(--blue) 50%, var(--ink) 65%, var(--ink) 100%); background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shine 7s linear infinite; }
+
+/* the form is not a grid: rows glow on hover, the caret line is blue, sections carry a dot */
+.q { transition: background 0.2s, padding-left 0.2s; border-radius: 8px; }
+.q:hover { background: linear-gradient(90deg, var(--blue-tint), transparent 70%); padding-left: 8px; }
+.q-in input:focus { box-shadow: inset 0 -2px 0 var(--blue); }
+.qs .kicker::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--blue); margin-right: 8px; vertical-align: middle; animation: breathe 2.4s ease-in-out infinite; }
+.qs .kicker.blue::before { background: #8b5cf6; }
+
+/* documents side: chips bob, icon floats, ring breathes */
+.doc-kinds .kind { animation: bob 3.6s ease-in-out infinite; }
+.doc-kinds .kind:nth-child(2) { animation-delay: 0.4s; } .doc-kinds .kind:nth-child(3) { animation-delay: 0.8s; } .doc-kinds .kind:nth-child(4) { animation-delay: 1.2s; } .doc-kinds .kind:nth-child(5) { animation-delay: 1.6s; }
+.drop-ic { position: relative; }
+.drop-ic::after { content: ''; position: absolute; inset: -10px; border-radius: 22px; border: 2px solid var(--blue-line); animation: breathe 2.8s ease-in-out infinite; }
+.dropbox { border-color: rgba(30,75,134,0.35); background-image: radial-gradient(circle at 50% 30%, rgba(133,166,242,0.12), transparent 60%); }
+
+/* strip and brand keep moving a little */
+.strip-i svg { animation: breathe 3s ease-in-out infinite; }
+.brand-mark svg { animation: float 5s ease-in-out infinite; }
+.btn.primary { background-image: linear-gradient(90deg, var(--blue), #3d5bd9, var(--blue)); background-size: 200% 100%; animation: shine 4s linear infinite; }
