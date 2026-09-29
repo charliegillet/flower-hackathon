@@ -26,7 +26,9 @@ PROVIDER_ENV = {
 
 
 def node_config(cfg: dict[str, str]) -> str:
-    cfg = dict(cfg, data_dir="/data", hmac_key_file="/secrets/bureau.key")
+    cfg = dict(cfg, data_dir="/data")
+    if cfg["role"] in {"bureau", "bank"}:  # only signer and verifiers hold the attestation key
+        cfg["hmac_key_file"] = "/secrets/bureau.key"
     return " ".join(f"{k}={json.dumps(str(v))}" for k, v in cfg.items())
 
 
@@ -54,9 +56,10 @@ def main() -> None:
             "    volumes:",
             f"      - ../keys/{key}:/keys/{key}:ro",
             f"      - ../{spec['node_config']['data_dir']}:/data:ro",
-            "      - ../secrets:/secrets:ro",
-            "    restart: unless-stopped",
         ]
+        if spec["node_config"]["role"] in {"bureau", "bank"}:
+            lines.append("      - ../secrets:/secrets:ro")
+        lines.append("    restart: unless-stopped")
     out = ROOT / "deploy" / "compose.supergrid.yaml"
     out.write_text("\n".join(lines) + "\n")
     print(f"wrote {out.relative_to(ROOT)}\n")

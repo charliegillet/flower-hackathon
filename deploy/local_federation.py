@@ -39,7 +39,9 @@ def _provider_env(provider: str | None, env: dict[str, str]) -> dict[str, str]:
 
 
 def _node_config(cfg: dict[str, str]) -> str:
-    cfg = dict(cfg, data_dir=str(ROOT / cfg["data_dir"]), hmac_key_file=str(ROOT / "secrets" / "bureau.key"))
+    cfg = dict(cfg, data_dir=str(ROOT / cfg["data_dir"]))
+    if cfg["role"] in {"bureau", "bank"}:  # only signer and verifiers hold the attestation key
+        cfg["hmac_key_file"] = str(ROOT / "secrets" / "bureau.key")
     return " ".join(f"{k}={json.dumps(str(v))}" for k, v in cfg.items())
 
 

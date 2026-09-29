@@ -124,7 +124,8 @@ def build_federation(use_llm: bool = True, latency: bool = True, topology: Path 
     for i, spec in enumerate(load_topology(topology)):
         cfg = dict(spec["node_config"])
         cfg["data_dir"] = str(ROOT / cfg["data_dir"])
-        cfg["hmac_key_file"] = str(ROOT / "secrets" / "bureau.key")
+        if cfg["role"] in {"bureau", "bank"}:  # only signer and verifiers hold the attestation key
+            cfg["hmac_key_file"] = str(ROOT / "secrets" / "bureau.key")
         llm = provider_llm(spec.get("provider"), cfg.get("model")) if use_llm else LLM(None, cfg.get("model"))
         nodes.append(SimNode(node_id=str(1000 + i), cfg=cfg, llm=llm, latency=(0.3 + 0.25 * i) if latency else 0.0))
     return InProcessGrid(nodes)
