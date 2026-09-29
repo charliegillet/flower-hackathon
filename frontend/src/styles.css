@@ -1,0 +1,219 @@
+:root {
+  color-scheme: dark;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #0f1218;
+  color: #e6e9ef;
+}
+
+.app {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+h1 {
+  font-size: 1.5rem;
+  color: #f0b429;
+}
+
+nav button {
+  background: none;
+  border: 1px solid #333;
+  color: #e6e9ef;
+  padding: 8px 14px;
+  margin-left: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+nav button.active {
+  background: #f0b429;
+  color: #111;
+  border-color: #f0b429;
+}
+
+.card {
+  background: #171c26;
+  border: 1px solid #262d3a;
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.form .grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #9aa4b5;
+}
+
+input,
+select {
+  background: #0f1218;
+  border: 1px solid #333c4d;
+  border-radius: 8px;
+  padding: 10px;
+  color: #e6e9ef;
+  font-size: 0.95rem;
+}
+
+button[type='submit'],
+.card > button {
+  background: #f0b429;
+  border: none;
+  color: #111;
+  font-weight: 600;
+  padding: 12px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+button.link {
+  background: none;
+  border: none;
+  color: #f0b429;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 8px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 10px 8px;
+  border-bottom: 1px solid #262d3a;
+}
+
+tbody tr {
+  cursor: pointer;
+}
+
+tbody tr:hover {
+  background: #1d2432;
+}
+
+.badge {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  text-transform: capitalize;
+  background: #333c4d;
+}
+
+.badge.approved,
+.badge.accepted {
+  background: #14532d;
+  color: #86efac;
+}
+.badge.denied {
+  background: #7f1d1d;
+  color: #fca5a5;
+}
+.badge.countered,
+.badge.negotiating {
+  background: #7c2d12;
+  color: #fdba74;
+}
+
+.evaluation {
+  border: 1px solid #262d3a;
+  border-radius: 10px;
+  padding: 16px;
+  margin: 16px 0;
+}
+.evaluation.approved {
+  border-color: #14532d;
+}
+.evaluation.denied {
+  border-color: #7f1d1d;
+}
+.evaluation.countered {
+  border-color: #7c2d12;
+}
+
+.evaluation dl {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+.evaluation dt {
+  font-size: 0.75rem;
+  color: #9aa4b5;
+}
+.evaluation dd {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.conversation {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.msg {
+  max-width: 80%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+}
+.msg p {
+  margin: 4px 0 0;
+}
+.msg.bank-agent {
+  align-self: flex-start;
+  background: #1d2432;
+  border: 1px solid #2e3a4f;
+}
+.msg.client-agent {
+  align-self: flex-end;
+  background: #2a2416;
+  border: 1px solid #4d422a;
+}
+.msg.system {
+  align-self: center;
+  background: none;
+  color: #9aa4b5;
+  font-size: 0.8rem;
+}
+.agent-name {
+  font-size: 0.75rem;
+  color: #9aa4b5;
+}
+
+.muted {
+  color: #9aa4b5;
+}
+.error {
+  color: #fca5a5;
+}
