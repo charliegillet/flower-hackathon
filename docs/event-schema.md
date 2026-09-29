@@ -34,7 +34,7 @@ The narrative text also streams as standard Responses events:
 | `bq.decline` | `bank`, `round`, `reason`, `message` | bank declined to quote or to improve |
 | `bq.improve` | `bank`, `from_total`, `to_total`, `delta` ($ saved, positive), `message` | round-2 improvement |
 | `bq.market` | `pmms_30y` (%), `as_of` (date string), `source` (url) | market context |
-| `bq.verdict` | `ranking` [ {`bank`,`rate`,`points`,`fees`,`apr`,`total_cost`,`monthly_pi`,`flags` (list of strings)} ] sorted best first, `winner` (bank), `savings_vs_single_quote` ($, winner vs the first bank's round-1 quote), `savings_vs_worst` ($), `horizon_years` | final ranking |
+| `bq.verdict` | `ranking` [ {`bank`,`rate`,`points`,`fees`,`apr`,`total_cost`,`monthly_pi`,`flags` (list of strings)} ] sorted best first, `winner` (bank), `savings_vs_single_quote` ($, winner vs the median round-1 total among unflagged lenders; never negative), `savings_vs_worst` ($), `horizon_years` | final ranking |
 | `bq.ledger` | `parties` [ {`party`,`role`,`learned` (list of strings),`never` (list of strings)} ] | final disclosure ledger |
 | `bq.done` | `elapsed_s` | last event |
 | `bq.error` | `message` | fatal error |

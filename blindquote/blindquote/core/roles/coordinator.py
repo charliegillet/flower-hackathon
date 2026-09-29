@@ -378,12 +378,13 @@ class Coordinator:
             key=lambda r: (bool(r["flags"]), r["total_cost"]),
         )
         winner = ranking[0]
-        round1_totals = [s.round1["total_cost"] for s in states.values() if s.round1]
-        typical = statistics.median(round1_totals)
+        # "Typical single quote" = median round-1 total among lenders that played fair.
+        fair = [s.round1["total_cost"] for s in states.values() if s.round1 and not s.flags]
+        typical = statistics.median(fair or [s.round1["total_cost"] for s in states.values() if s.round1])
         verdict = {
             "ranking": ranking,
             "winner": winner["bank"],
-            "savings_vs_single_quote": round(typical - winner["total_cost"], 2),
+            "savings_vs_single_quote": round(max(typical - winner["total_cost"], 0.0), 2),
             "savings_vs_worst": round(max(r["total_cost"] for r in ranking) - winner["total_cost"], 2),
             "horizon_years": bands["horizon_years"],
         }
@@ -424,10 +425,12 @@ class Coordinator:
                 pass
         if not wrote:
             w = verdict["ranking"][0]
+            saving = verdict["savings_vs_single_quote"]
+            vs = (f"${saving:,.0f} less than a typical single quote" if saving > 0
+                  else "in line with a typical single quote")
             self._text(
                 f"{w['bank']} wins at {w['rate']:.3f}% with {w['points']:.2f} points: about "
-                f"${w['total_cost']:,.0f} over {verdict['horizon_years']} years, "
-                f"${verdict['savings_vs_single_quote']:,.0f} less than a typical single quote. "
+                f"${w['total_cost']:,.0f} over {verdict['horizon_years']} years, {vs}. "
                 f"The 30-year market average is {market['pmms_30y']:.2f}% ({market['as_of']})."
             )
         self.ev.raw({"type": "response.completed", "response": {"output": []}})
