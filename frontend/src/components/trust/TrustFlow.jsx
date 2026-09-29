@@ -84,7 +84,7 @@ export default function TrustFlow({ user, onAccepted, onError }) {
         <StageAnswers form={form} setForm={editForm} onSeal={() => { setCounts((c) => ({ ...c, locked: lockedCount })); setStage('seal'); }} onFillSample={() => setForm(SAMPLE_FORM)} />
       )}
       {stage === 'seal' && (
-        <StageSeal form={form} onBack={() => setStage('answers')} onApprove={(b) => { setBands(b); setGate('send'); }} />
+        <StageSeal form={form} onBack={() => setStage('answers')} onApprove={(b) => { setBands(b); setCounts((c) => ({ ...c, shared: bandsForDisplay(b).length })); setStage(form.purpose === 'home' ? 'home' : 'banks'); }} />
       )}
       {stage === 'home' && bands && (
         <StageHome
@@ -98,23 +98,18 @@ export default function TrustFlow({ user, onAccepted, onError }) {
         <StageBanks bands={bands} mandate={mandate} principal={principal} horizonYears={horizonYears} consentToken={form._consentToken || null} onLedger={onLedger} onOpenLedger={() => setLedgerOpen(true)} onBlocked={onBlocked} onAccept={(bank, offer) => setGate({ accept: { bank, offer } })} />
       )}
 
-      {gate === 'send' && bands && (
-        <Approval kicker="Gate 1 of 3" title="Send the sealed envelope" releases={[...rangeRows, 'A one-time code to the credit bureau']} keeps={KEEPS} approveLabel="Approve and send" onBack={() => setGate(null)} onApprove={() => { setGate(null); setCounts((c) => ({ ...c, shared: rangeRows.length })); setStage(form.purpose === 'home' ? 'home' : 'banks'); }}>
-          <p className="sub">This is the first thing that crosses. The coordinator and every lender get exactly this, and nothing else.</p>
-        </Approval>
-      )}
       {gate === 'ranges' && deal && bands && (() => {
         const next = { ...form, propertyPrice: deal.price, amount: deal.loan };
         const nb = computeBands({ ...next, _token: bands.token });
         const rows = bandsForDisplay(nb).map((r) => `${r.label}: ${r.value}`);
         return (
-          <Approval kicker="Gate 2 of 3" title="Send the new ranges to the lenders" releases={rows} keeps={['The address', 'The agreed price itself', ...KEEPS]} approveLabel="Send to lenders" onBack={() => setGate(null)} onApprove={() => { setGate(null); setForm(next); setBands(nb); setCounts((c) => ({ ...c, shared: rows.length })); setStage('banks'); }}>
+          <Approval kicker="Gate 1 of 2" title="Send the new ranges to the lenders" releases={rows} keeps={['The address', 'The agreed price itself', ...KEEPS]} approveLabel="Send to lenders" onBack={() => setGate(null)} onApprove={() => { setGate(null); setForm(next); setBands(nb); setCounts((c) => ({ ...c, shared: rows.length })); setStage('banks'); }}>
             <p className="sub">The home agent's result becomes the lenders' input. Loan vs. value: {bands.ltvBand} → {nb.ltvBand}.</p>
           </Approval>
         );
       })()}
       {gate?.accept && (
-        <Approval kicker="Gate 3 of 3" title={`Accept ${gate.accept.bank.name} at ${gate.accept.offer.rate.toFixed(3)}%`} releases={[`Your name and contact details, to ${gate.accept.bank.name} only`, 'Your full application, to start the paperwork']} keeps={['Anything to the other seven lenders', 'Your documents, until you send them to this lender']} approveLabel="Accept and release" onBack={() => setGate(null)} onApprove={() => { const g = gate.accept; setGate(null); onAccepted?.({ form, bands, bank: g.bank, offer: g.offer }); }}>
+        <Approval kicker="Gate 2 of 2" title={`Accept ${gate.accept.bank.name} at ${gate.accept.offer.rate.toFixed(3)}%`} releases={[`Your name and contact details, to ${gate.accept.bank.name} only`, 'Your full application, to start the paperwork']} keeps={['Anything to the other seven lenders', 'Your documents, until you send them to this lender']} approveLabel="Accept and release" onBack={() => setGate(null)} onApprove={() => { const g = gate.accept; setGate(null); onAccepted?.({ form, bands, bank: g.bank, offer: g.offer }); }}>
           <p className="sub">This is the only moment your identity leaves, and it goes to one lender.</p>
         </Approval>
       )}
