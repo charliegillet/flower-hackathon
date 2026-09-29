@@ -3,6 +3,7 @@
     uv run python deploy/local_federation.py up      # background processes, logs in .flwr-local/
     uv run python deploy/local_federation.py status
     uv run python deploy/local_federation.py down
+    uv run python deploy/local_federation.py run     # foreground (systemd): supervises, stops all on SIGTERM
 
 Every SuperNode gets its own FLWR_HOME, Runtime API port, --node-config (role,
 name, data_dir, model) and upstream model provider (Flower or Nebius), exactly
@@ -61,8 +62,8 @@ def ensure_connection() -> None:
         print(f"added [superlink.local-agent] to {cfg}")
 
 
-def up() -> None:
-    if PIDS.exists():
+def up(foreground: bool = False) -> None:
+    if PIDS.exists() and not foreground:
         print("already running (run `down` first)")
         return
     env_file = {k: v for k, v in dotenv_values(ROOT / ".env").items() if v}
@@ -76,7 +77,7 @@ def up() -> None:
     log = open(STATE / "logs" / "superlink.log", "w")
     pids["superlink"] = subprocess.Popen(
         [_bin("flower-superlink"), "--insecure", "--database", str(STATE / "superlink.db")],
-        cwd=ROOT / "blindquote", env=link_env, stdout=log, stderr=subprocess.STDOUT,
+        cwd=ROOT / "blindquote", env=link_env, stdout=log, stderr=subprocess.STDOUT, start_new_session=True,
     ).pid
     time.sleep(4)
 
@@ -87,23 +88,76 @@ def up() -> None:
         pids[spec["key"]] = subprocess.Popen(
             [_bin("flower-supernode"), "--insecure", "--superlink", "127.0.0.1:9092",
              "--port", str(9110 + i), "--node-config", _node_config(spec["node_config"])],
-            cwd=ROOT / "blindquote", env=node_env, stdout=log, stderr=subprocess.STDOUT,
+            cwd=ROOT / "blindquote", env=node_env, stdout=log, stderr=subprocess.STDOUT, start_new_session=True,
         ).pid
     PIDS.write_text(json.dumps(pids, indent=2))
-    print("started:", ", ".join(pids), f"\nlogs: {STATE / 'logs'}")
+    print("started:", ", ".join(pids), f"\nlogs: {STATE / 'logs'}", flush=True)
+    if foreground:
+        _supervise(pids)
+
+
+def _supervise(pids: dict[str, int]) -> None:
+    """Stay in the foreground (for systemd): stop every process on SIGTERM, exit if one dies."""
+    stopping = False
+
+    def stop(*_: object) -> None:
+        nonlocal stopping
+        stopping = True
+
+    signal.signal(signal.SIGTERM, stop)
+    signal.signal(signal.SIGINT, stop)
+    while not stopping:
+        time.sleep(2)
+        dead = []
+        for name, pid in pids.items():
+            try:
+                os.kill(pid, 0)
+                if os.waitpid(pid, os.WNOHANG)[0] == pid:
+                    dead.append(name)
+            except (ProcessLookupError, ChildProcessError):
+                dead.append(name)
+        if dead:
+            print("exited:", ", ".join(dead), "- stopping the federation", flush=True)
+            break
+    down()
+    if not stopping:
+        sys.exit(1)  # let systemd restart the whole federation
 
 
 def down() -> None:
     if not PIDS.exists():
         print("not running")
         return
-    for name, pid in json.loads(PIDS.read_text()).items():
+    pids = json.loads(PIDS.read_text())
+    # Each process leads its own group, so its SuperExec/task children stop with it.
+    for name, pid in pids.items():
         try:
-            os.kill(pid, signal.SIGTERM)
+            os.killpg(pid, signal.SIGTERM)
             print("stopped", name)
         except ProcessLookupError:
             pass
+    deadline = time.time() + 10
+    while time.time() < deadline and any(_alive(pid) for pid in pids.values()):
+        time.sleep(0.5)
+    for name, pid in pids.items():  # some SuperNodes ignore SIGTERM mid-task
+        if _alive(pid):
+            try:
+                os.killpg(pid, signal.SIGKILL)
+                print("killed", name)
+            except ProcessLookupError:
+                pass
     PIDS.unlink()
+
+
+def _alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    try:
+        return os.waitpid(pid, os.WNOHANG)[0] != pid  # reap if it is our exited child
+    except ChildProcessError:
+        return True
 
 
 def status() -> None:
@@ -120,4 +174,5 @@ def status() -> None:
 
 
 if __name__ == "__main__":
-    {"up": up, "down": down, "status": status}[sys.argv[1] if len(sys.argv) > 1 else "status"]()
+    {"up": up, "run": lambda: up(foreground=True), "down": down, "status": status}[
+        sys.argv[1] if len(sys.argv) > 1 else "status"]()
