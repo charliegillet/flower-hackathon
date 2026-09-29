@@ -427,8 +427,8 @@ class Coordinator:
                     if etype == "response.output_text.delta":
                         wrote = True
                         self.ev.raw(event)
-                    elif etype == "response.completed" and wrote:
-                        self.ev.raw(event)
+                    elif etype == "response.completed":
+                        break  # a single completion is emitted below
                     elif etype in {"error", "response.failed", "response.incomplete"}:
                         break
             except Exception:  # noqa: BLE001 - fall back to deterministic text
