@@ -12,81 +12,48 @@
 //   asis   -> sent exactly as entered (only non-identifying choices)
 export const SECTIONS = [
   {
+    key: 'loan',
+    title: 'The loan',
+    fields: [
+      { name: 'amount', label: 'Amount', type: 'number', policy: 'range', band: 'loan', required: true, min: 100, money: true },
+      { name: 'purpose', label: 'Purpose', type: 'select', options: ['home', 'auto', 'personal', 'business', 'education', 'debt-consolidation', 'other'], policy: 'asis' },
+      { name: 'termMonths', label: 'Term (months)', type: 'number', policy: 'asis', min: 6, max: 360 },
+      { name: 'propertyPrice', label: 'Property price', type: 'number', policy: 'range', band: 'ltv', money: true, hint: 'Home loans' },
+      { name: 'occupancy', label: 'Use', type: 'select', options: ['Primary home', 'Second home', 'Investment'], policy: 'asis' },
+    ],
+  },
+  {
+    key: 'money',
+    title: 'Your finances',
+    fields: [
+      { name: 'annualIncome', label: 'Annual income', type: 'number', policy: 'range', band: 'dti', required: true, money: true },
+      { name: 'monthlyDebt', label: 'Debt payments / month', type: 'number', policy: 'range', band: 'dti', money: true, required: true },
+      { name: 'totalAssets', label: 'Savings and assets', type: 'number', policy: 'range', band: 'asset', money: true },
+      { name: 'creditScore', label: 'Credit score', type: 'number', policy: 'range', band: 'fico', required: true, min: 300, max: 850, hint: 'Bureau confirms the range' },
+      { name: 'employmentStatus', label: 'Employment', type: 'select', options: ['employed', 'self-employed', 'unemployed', 'retired', 'student'], policy: 'asis' },
+    ],
+  },
+  {
     key: 'identity',
     title: 'About you',
     fields: [
-      { name: 'fullName', label: 'Full legal name', type: 'text', policy: 'never', required: true },
-      { name: 'dateOfBirth', label: 'Date of birth', type: 'date', policy: 'never', required: true },
-      { name: 'phone', label: 'Phone', type: 'tel', policy: 'never' },
+      { name: 'fullName', label: 'Full name', type: 'text', policy: 'never', required: true },
       { name: 'email', label: 'Email', type: 'email', policy: 'never', required: true },
-      { name: 'street', label: 'Street address', type: 'text', policy: 'never' },
-      { name: 'city', label: 'City', type: 'text', policy: 'never' },
       { name: 'state', label: 'State', type: 'text', policy: 'asis', hint: 'Banks see the state only' },
-      { name: 'zip', label: 'ZIP', type: 'text', policy: 'never' },
-      { name: 'ssnLast4', label: 'SSN, last 4 digits', type: 'text', policy: 'never', maxLength: 4 },
-      {
-        name: 'residency',
-        label: 'Citizenship / residency',
-        type: 'select',
-        options: ['US citizen', 'Permanent resident', 'Visa holder', 'Other'],
-        policy: 'asis',
-      },
-      { name: 'maritalStatus', label: 'Marital status', type: 'select', options: ['Single', 'Married', 'Partnered', 'Divorced', 'Widowed'], policy: 'never' },
-      { name: 'dependents', label: 'Dependents', type: 'number', policy: 'never', min: 0 },
+      { name: 'ssnLast4', label: 'SSN, last 4', type: 'text', policy: 'never', maxLength: 4 },
     ],
   },
   {
-    key: 'income',
-    title: 'Income and work',
+    key: 'want',
+    title: 'What you want',
+    mandate: true,
     fields: [
-      { name: 'annualIncome', label: 'Annual income ($)', type: 'number', policy: 'range', required: true, band: 'dti' },
-      { name: 'otherIncome', label: 'Other yearly income ($)', type: 'number', policy: 'range', band: 'dti', hint: 'Rental, bonus, side work' },
-      { name: 'employmentStatus', label: 'Employment status', type: 'select', options: ['employed', 'self-employed', 'unemployed', 'retired', 'student'], policy: 'asis' },
-      { name: 'employer', label: 'Employer', type: 'text', policy: 'never' },
-      { name: 'yearsEmployed', label: 'Years in current job', type: 'number', policy: 'range', band: 'tenure', min: 0 },
-    ],
-  },
-  {
-    key: 'assets',
-    title: 'What you own',
-    fields: [
-      { name: 'checking', label: 'Checking ($)', type: 'number', policy: 'range', band: 'asset' },
-      { name: 'savings', label: 'Savings ($)', type: 'number', policy: 'range', band: 'asset' },
-      { name: 'investments', label: 'Investments ($)', type: 'number', policy: 'range', band: 'asset' },
-      { name: 'retirement', label: 'Retirement accounts ($)', type: 'number', policy: 'range', band: 'asset' },
-      { name: 'realEstate', label: 'Real estate owned ($)', type: 'number', policy: 'range', band: 'asset' },
-    ],
-  },
-  {
-    key: 'debts',
-    title: 'What you owe, per month',
-    fields: [
-      { name: 'monthlyHousing', label: 'Rent or mortgage ($/mo)', type: 'number', policy: 'range', band: 'dti' },
-      { name: 'autoLoans', label: 'Auto loans ($/mo)', type: 'number', policy: 'range', band: 'dti' },
-      { name: 'studentLoans', label: 'Student loans ($/mo)', type: 'number', policy: 'range', band: 'dti' },
-      { name: 'creditCards', label: 'Credit cards ($/mo)', type: 'number', policy: 'range', band: 'dti' },
-      { name: 'otherDebt', label: 'Other debt ($/mo)', type: 'number', policy: 'range', band: 'dti' },
-      { name: 'totalBalances', label: 'Total balance owed ($)', type: 'number', policy: 'never', hint: 'For your own records; never sent' },
-    ],
-  },
-  {
-    key: 'credit',
-    title: 'Credit history',
-    fields: [
-      { name: 'creditScore', label: 'Credit score', type: 'number', policy: 'range', band: 'fico', required: true, min: 300, max: 850, hint: 'Bureau confirms the range, not the number' },
-      { name: 'derogatory', label: 'Bankruptcy or late payments in the last 7 years', type: 'select', options: ['No', 'Yes'], policy: 'asis' },
-    ],
-  },
-  {
-    key: 'loan',
-    title: 'The loan you want',
-    fields: [
-      { name: 'amount', label: 'Loan amount ($)', type: 'number', policy: 'range', band: 'loan', required: true, min: 100 },
-      { name: 'purpose', label: 'Purpose', type: 'select', options: ['home', 'auto', 'personal', 'business', 'education', 'debt-consolidation', 'other'], policy: 'asis' },
-      { name: 'termMonths', label: 'Term (months)', type: 'number', policy: 'asis', required: true, min: 6, max: 360 },
-      { name: 'propertyPrice', label: 'Property price ($)', type: 'number', policy: 'range', band: 'ltv', hint: 'Home loans only' },
-      { name: 'occupancy', label: 'How you will use the property', type: 'select', options: ['Primary home', 'Second home', 'Investment'], policy: 'asis' },
-      { name: 'horizonYears', label: 'Years you plan to keep this loan', type: 'number', policy: 'never', min: 1, hint: 'Used to rank offers; never sent' },
+      { name: 'priority', label: 'Matters most', type: 'select', options: ['Lowest total cost', 'Lowest monthly payment', 'Least cash at closing', 'Fastest close'], policy: 'asis', required: true, hint: 'Banks see this' },
+      { name: 'horizonYears', label: 'Years you\'ll keep it', type: 'number', policy: 'never', min: 1, required: true },
+      { name: 'maxPayment', label: 'Payment cap / month', type: 'number', policy: 'never', money: true, hint: 'Your agent only' },
+      { name: 'cashToClose', label: 'Cash for closing', type: 'number', policy: 'asis', money: true, hint: 'Sets whether points are possible' },
+      { name: 'noPrepayPenalty', label: 'No prepayment penalty', type: 'select', options: ['Required', 'Nice to have', 'Don\'t care'], policy: 'asis' },
+      { name: 'walkAwayRate', label: 'Walk away above (%)', type: 'number', policy: 'never', hint: 'Your agent only' },
     ],
   },
 ];
@@ -97,7 +64,7 @@ export const FIELD_BY_NAME = Object.fromEntries(ALL_FIELDS.map((f) => [f.name, f
 // The only keys a bank message may ever contain. The guard checks against this.
 export const ALLOWED_BAND_KEYS = [
   'token', 'dtiBand', 'ltvBand', 'assetBand', 'loanBand', 'ficoBand', 'tenureBand',
-  'employmentStatus', 'purpose', 'termMonths', 'occupancy', 'residency', 'state', 'derogatory', 'sig',
+  'employmentStatus', 'purpose', 'termMonths', 'occupancy', 'state', 'priority', 'cashToClose', 'noPrepayPenalty', 'sig',
 ];
 
 const n = (v) => (v === '' || v == null || Number.isNaN(Number(v)) ? 0 : Number(v));
@@ -144,10 +111,7 @@ function tenureBand(years) {
 
 /** Exact totals, for the user's own eyes only. */
 export function totals(form) {
-  const income = n(form.annualIncome) + n(form.otherIncome);
-  const monthlyDebt = ['monthlyHousing', 'autoLoans', 'studentLoans', 'creditCards', 'otherDebt'].reduce((s, k) => s + n(form[k]), 0);
-  const assets = ['checking', 'savings', 'investments', 'retirement', 'realEstate'].reduce((s, k) => s + n(form[k]), 0);
-  return { income, monthlyDebt, assets };
+  return { income: n(form.annualIncome), monthlyDebt: n(form.monthlyDebt), assets: n(form.totalAssets) };
 }
 
 /** The bands object. This is the entire message a bank receives. */
@@ -162,14 +126,14 @@ export function computeBands(form) {
     assetBand: moneyBand(t.assets, 50_000)?.label ?? null,
     loanBand: moneyBand(n(form.amount), 50_000)?.label ?? null,
     ficoBand: ficoBand(n(form.creditScore))?.label ?? null,
-    tenureBand: tenureBand(form.yearsEmployed)?.label ?? null,
     employmentStatus: form.employmentStatus || null,
     purpose: form.purpose || null,
     termMonths: n(form.termMonths) || null,
     occupancy: form.occupancy || null,
-    residency: form.residency || null,
     state: form.state || null,
-    derogatory: form.derogatory === 'Yes',
+    priority: form.priority || null,
+    cashToClose: n(form.cashToClose) ? moneyBand(n(form.cashToClose), 10_000)?.label ?? null : null,
+    noPrepayPenalty: form.noPrepayPenalty || null,
   };
 }
 
@@ -180,14 +144,14 @@ export const BAND_LABELS = {
   ltvBand: 'Loan vs. property value',
   assetBand: 'Total assets',
   loanBand: 'Loan amount',
-  tenureBand: 'Time in current job',
   employmentStatus: 'Employment',
   purpose: 'Purpose',
   termMonths: 'Term',
   occupancy: 'Use of property',
-  residency: 'Residency',
   state: 'State',
-  derogatory: 'Credit issues in 7 yrs',
+  priority: 'Wants',
+  cashToClose: 'Cash for closing',
+  noPrepayPenalty: 'Prepayment penalty',
 };
 
 export function bandsForDisplay(bands) {
@@ -195,7 +159,7 @@ export function bandsForDisplay(bands) {
     .map(([key, label]) => {
       let value = bands[key];
       if (key === 'termMonths' && value) value = `${value} months`;
-      if (key === 'derogatory') value = value ? 'Yes' : 'No';
+      if (key === 'noPrepayPenalty' && value) value = value === 'Required' ? 'None allowed' : value === 'Nice to have' ? 'Prefer none' : 'Either';
       return { key, label, value };
     })
     .filter((r) => r.value != null && r.value !== '');
@@ -235,24 +199,45 @@ export function randomToken() {
 
 export function formatValue(field, value) {
   if (value === '' || value == null) return '';
-  if (field.type === 'number' && /\$/.test(field.label)) return money(n(value));
+  if (field.money) return money(n(value));
+  if (field.name === 'walkAwayRate') return `${value}%`;
   if (field.name === 'ssnLast4') return `•••-••-${value}`;
   return String(value);
 }
 
 /** A believable applicant so the demo starts full. Every value is synthetic. */
 export const SAMPLE_FORM = {
-  fullName: 'Maya R. Okafor', dateOfBirth: '1991-04-18', phone: '(415) 555-0142', email: 'maya@example.com',
-  street: '2140 Fillmore St', city: 'San Francisco', state: 'CA', zip: '94115', ssnLast4: '4471',
-  residency: 'US citizen', maritalStatus: 'Married', dependents: 1,
-  annualIncome: 142000, otherIncome: 6000, employmentStatus: 'employed', employer: 'Bay Analytics Inc.', yearsEmployed: 4,
-  checking: 18400, savings: 62000, investments: 88000, retirement: 50000, realEstate: 0,
-  monthlyHousing: 2900, autoLoans: 420, studentLoans: 310, creditCards: 220, otherDebt: 0, totalBalances: 61000,
-  creditScore: 752, derogatory: 'No',
-  amount: 680000, purpose: 'home', termMonths: 360, propertyPrice: 850000, occupancy: 'Primary home', horizonYears: 7,
+  amount: 680000, purpose: 'home', termMonths: 360, propertyPrice: 850000, occupancy: 'Primary home',
+  annualIncome: 142000, monthlyDebt: 3850, totalAssets: 218400, creditScore: 752, employmentStatus: 'employed',
+  fullName: 'Maya R. Okafor', email: 'maya@example.com', state: 'CA', ssnLast4: '4471',
+  priority: 'Lowest total cost', horizonYears: 7, maxPayment: 4300, cashToClose: 25000, noPrepayPenalty: 'Required', walkAwayRate: 6.75,
   // Demo only: the sample applicant has granted the credit bureau node consent, so her
   // credit range is bureau-signed. Other applicants' ranges stay self-reported.
   _consentToken: 'consent_demo_maya',
 };
 
-export const EMPTY_FORM = Object.fromEntries(ALL_FIELDS.map((f) => [f.name, f.name === 'termMonths' ? 360 : f.name === 'purpose' ? 'home' : f.name === 'employmentStatus' ? 'employed' : '']));
+const DEFAULTS = { termMonths: 360, purpose: 'home', employmentStatus: 'employed', occupancy: 'Primary home', priority: 'Lowest total cost', horizonYears: 7, noPrepayPenalty: 'Nice to have' };
+export const EMPTY_FORM = Object.fromEntries(ALL_FIELDS.map((f) => [f.name, DEFAULTS[f.name] ?? '']));
+
+/** The private half of the mandate. Never leaves the device; the agent scores offers against it. */
+export function mandateOf(form) {
+  return { priority: form.priority, horizonYears: n(form.horizonYears) || 7, maxPayment: n(form.maxPayment) || null, cashToClose: n(form.cashToClose) || null, noPrepayPenalty: form.noPrepayPenalty || 'Nice to have', walkAwayRate: n(form.walkAwayRate) || null };
+}
+
+/**
+ * Documents a user can drop in. Each one is read on the device and only the
+ * resulting range leaves. For the wireframe the "reading" is simulated: the
+ * file name picks the type, and sample values fill any empty field. The real
+ * version runs local OCR / parsing in the browser and never uploads the file.
+ */
+export const DOC_TYPES = [
+  { id: 'paystub', label: 'Pay stub or W-2', match: /pay|stub|w-?2|1040|tax|income/i, fills: { annualIncome: 142000, employmentStatus: 'employed' }, verifies: ['annualIncome', 'employmentStatus'], note: 'Income confirmed' },
+  { id: 'statement', label: 'Bank statement', match: /statement|bank|checking|savings|brokerage/i, fills: { totalAssets: 218400, cashToClose: 25000 }, verifies: ['totalAssets'], note: 'Assets confirmed' },
+  { id: 'credit', label: 'Credit report', match: /credit|report|fico|experian|equifax|transunion/i, fills: { creditScore: 752, monthlyDebt: 3850 }, verifies: ['creditScore', 'monthlyDebt'], note: 'Score and debts confirmed' },
+  { id: 'id', label: 'Photo ID', match: /id|license|licence|passport|dl/i, fills: { fullName: 'Maya R. Okafor', state: 'CA', ssnLast4: '4471' }, verifies: ['fullName', 'state'], note: 'Identity confirmed' },
+  { id: 'purchase', label: 'Purchase agreement or appraisal', match: /purchase|contract|appraisal|offer|listing|property/i, fills: { propertyPrice: 850000, amount: 680000, purpose: 'home', occupancy: 'Primary home' }, verifies: ['propertyPrice', 'amount'], note: 'Property and loan confirmed' },
+];
+
+export function classifyDoc(fileName) {
+  return DOC_TYPES.find((d) => d.match.test(fileName)) || null;
+}
