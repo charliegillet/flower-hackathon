@@ -1,0 +1,17 @@
+{
+  "name": "Wells Fargo",
+  "persona": "a bank with a wide branch network that is slow to improve its pricing",
+  "par_rate": 6.93,
+  "rate_per_point": 0.21,
+  "margin_pts": 0.55,
+  "floor_pts": 0.5,
+  "fees": 1800,
+  "buydown_pts": 1.0,
+  "overlays": {
+    "min_fico": 660,
+    "max_dti": 45,
+    "max_ltv_band": "90.01-95%"
+  },
+  "strategy": "rarely move on price",
+  "pitch": "Wells Fargo: in-branch support from application to closing."
+}

@@ -1,0 +1,19 @@
+{
+  "name": "Navy Federal Credit Union",
+  "persona": "a member-owned credit union with low fees and thin margins that never negotiates",
+  "par_rate": 6.73,
+  "rate_per_point": 0.22,
+  "margin_pts": 0.35,
+  "floor_pts": 0.3,
+  "fees": 995,
+  "buydown_pts": 1.0,
+  "overlays": {
+    "min_fico": 680,
+    "max_dti": 43,
+    "max_ltv_band": "85.01-90%"
+  },
+  "strategy": "never reprice",
+  "reprice": false,
+  "round2_message": "Our member pricing is already at its floor.",
+  "pitch": "Navy Federal: member pricing with low fees."
+}

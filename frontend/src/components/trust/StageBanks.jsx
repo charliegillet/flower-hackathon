@@ -1,27 +1,60 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { BANKS, logoUrl } from '../../core/banks.js';
 import { startNegotiation, describeBands } from '../../core/negotiation.js';
+import { flowerAvailable, startFlowerNegotiation } from '../../core/flowerNegotiation.js';
 import { bandsForDisplay } from '../../core/bands.js';
 import { Lock, Arrow, Check, Block, Shield, Spinner } from './Icons.jsx';
 
 const STATUS = {
   waiting: ['idle', 'Waiting'], sent: ['work', 'Pricing'], thinking: ['work', 'Thinking'], request: ['warn', 'Asking for more'],
   blocked: ['warn', 'Blocked'], quote: ['done', 'Quoted'], improve: ['done', 'Improved'], hold: ['idle', 'Held'],
+  flag: ['warn', 'APR flagged'], declined: ['idle', 'Declined'],
 };
 
-export default function StageBanks({ bands, principal, horizonYears, onAccept, onOpenLedger }) {
+export default function StageBanks({ bands, principal, horizonYears, consentToken, onAccept, onOpenLedger, onLedger }) {
   const [events, setEvents] = useState([]);
   const [selected, setSelected] = useState(BANKS[0].id);
   const [done, setDone] = useState(null);
+  // 'flower' = real Flower run (SuperLink + bank SuperNodes); 'simulated' = in-browser fallback.
+  const [engine, setEngine] = useState(null);
+  const [fallbackNote, setFallbackNote] = useState(null);
+  const [live, setLive] = useState({ nodes: 0, attest: null, market: null, narrative: '', error: null });
   const logRef = useRef(null);
 
   useEffect(() => {
-    const run = startNegotiation(bands, BANKS, (e) => {
+    let run = { cancel: () => {} };
+    let cancelled = false;
+    const startSimulated = () => {
+      setEngine('simulated');
+      run = startNegotiation(bands, BANKS, onEvent, { principal, horizonYears });
+    };
+    const onEvent = (e) => {
+      if (e.type === 'fallback') {
+        if (cancelled) return;
+        setFallbackNote(e.reason === 'busy' ? 'Simulated: Flower busy' : 'Simulated: Flower prices home loans only');
+        setEvents([]);
+        startSimulated();
+        return;
+      }
+      if (e.type === 'node') setLive((l) => ({ ...l, nodes: l.nodes + (e.role === 'coordinator' ? 0 : 1) }));
+      else if (e.type === 'attest') setLive((l) => ({ ...l, attest: e }));
+      else if (e.type === 'market') setLive((l) => ({ ...l, market: e }));
+      else if (e.type === 'ledger') onLedger?.(e.parties);
+      else if (e.type === 'error') setLive((l) => ({ ...l, error: e.text }));
+      else if (e.type === 'done') { setDone(e); setLive((l) => ({ ...l, narrative: e.narrative || '' })); }
       setEvents((prev) => [...prev, e]);
-      if (e.type === 'done') setDone(e);
-    }, { principal, horizonYears });
-    return run.cancel;
-  }, [bands, principal, horizonYears]);
+    };
+    flowerAvailable().then((st) => {
+      if (cancelled) return;
+      if (st.available) {
+        setEngine('flower');
+        run = startFlowerNegotiation(bands, onEvent, { horizonYears, consentToken });
+      } else {
+        startSimulated();
+      }
+    });
+    return () => { cancelled = true; run.cancel(); };
+  }, [bands, principal, horizonYears, consentToken, onLedger]);
 
   useEffect(() => { logRef.current?.scrollTo({ top: 1e6, behavior: 'smooth' }); }, [events, selected]);
 
@@ -40,7 +73,13 @@ export default function StageBanks({ bands, principal, horizonYears, onAccept, o
     return m;
   }, [events]);
 
-  const ranking = useMemo(() => BANKS.filter((b) => byBank[b.id].offer).sort((a, b) => byBank[a.id].offer.total - byBank[b.id].offer.total), [byBank]);
+  const ranking = useMemo(() => {
+    const quoted = BANKS.filter((b) => byBank[b.id].offer).sort((a, b) => byBank[a.id].offer.total - byBank[b.id].offer.total);
+    const verdict = engine === 'flower' ? events.find((e) => e.type === 'verdict') : null;
+    if (!verdict?.ranking?.length) return quoted;
+    const pos = (b) => { const i = verdict.ranking.indexOf(b.id); return i < 0 ? Infinity : i; };
+    return [...quoted].sort((a, b) => pos(a) - pos(b));
+  }, [byBank, events, engine]);
   const leader = ranking[0];
   const round2 = events.find((e) => e.type === 'round2');
   const bank = BANKS.find((b) => b.id === selected);
@@ -54,6 +93,7 @@ export default function StageBanks({ bands, principal, horizonYears, onAccept, o
         <div className="stage-head">
           <h2>Banks</h2>
           <p className="sub">Each bank got the same sealed envelope. Click one to watch its agent.</p>
+          <EngineBadge engine={engine} live={live} note={fallbackNote} />
         </div>
         {BANKS.map((b) => {
           const s = byBank[b.id];
@@ -89,7 +129,9 @@ export default function StageBanks({ bands, principal, horizonYears, onAccept, o
             <div className="knows-h"><Shield width={14} height={14} /><b>What {bank.short} knows about you</b><span className="sub">and nothing else</span></div>
             <div className="chips">
               {rows.map((r) => <span className="chip blue" key={r.key}>{r.label}: {r.value}</span>)}
-              {round2 && <span className="chip blue">Best competing cost: ${round2.bestTotal.toLocaleString()}</span>}
+              {round2 && (engine === 'flower'
+                ? <span className="chip blue">Round 2: its rank and % gap to the best offer</span>
+                : <span className="chip blue">Best competing cost: ${round2.bestTotal.toLocaleString()}</span>)}
             </div>
             <div className="chips">
               {['Your name', 'Exact income', 'Exact assets', 'Exact credit score', 'SSN', 'Employer', 'Address', 'Other banks\' offers'].map((x) => <span className="chip slate" key={x}><Lock width={10} height={10} />{x}</span>)}
@@ -142,8 +184,11 @@ export default function StageBanks({ bands, principal, horizonYears, onAccept, o
               );
             })}
           </div>
+          {live.narrative && <div className="narrative"><b>Coordinator's explanation</b><p>{live.narrative}</p></div>}
           <div className="rank-f">
-            <span className="sub">{done ? 'Run complete.' : 'Negotiation in progress. Banks hear one number in round 2: the best competing total cost.'}</span>
+            <span className="sub">{live.error ? `Run failed: ${live.error}` : done ? 'Run complete.' : engine === 'flower'
+              ? 'Negotiation in progress on Flower. In round 2 banks hear only their rank and % gap; your horizon stays private.'
+              : 'Negotiation in progress. Banks hear one number in round 2: the best competing total cost.'}</span>
             <span className="spacer" />
             <button type="button" className="btn ghost small" onClick={onOpenLedger}>Open disclosure ledger</button>
           </div>
@@ -167,5 +212,23 @@ function Msg({ e, bank }) {
   if (e.type === 'quote') return <div className="msg out"><span className="who">{bank.short} → Coordinator <span className="tag sealed"><Lock width={10} height={10} />Sealed</span></span>{e.text}</div>;
   if (e.type === 'improve') return <div className="msg out"><span className="who">{bank.short} → Coordinator <span className="tag done"><Check width={10} height={10} />Improved</span></span>{e.text}</div>;
   if (e.type === 'hold') return <div className="msg out"><span className="who">{bank.short} → Coordinator</span>{e.text}</div>;
+  if (e.type === 'declined') return <div className="msg out"><span className="who">{bank.short} → Coordinator</span>Declined to quote: {e.text}</div>;
+  if (e.type === 'flag') return <div className="msg blocked"><span className="who"><Block width={11} height={11} /> Guard → {bank.short}</span>{e.text}</div>;
   return null;
+}
+
+function EngineBadge({ engine, live, note }) {
+  if (!engine) return <div className="engine sub"><Spinner width={11} height={11} /> Connecting…</div>;
+  if (engine === 'simulated') return <div className="engine sub">{note || 'Simulated in your browser (Flower bridge offline)'}</div>;
+  const credit = live.attest
+    ? live.attest.selfReported
+      ? `credit ${live.attest.ficoBand} self-reported (no bureau file)`
+      : live.attest.verified ? `credit ${live.attest.ficoBand} bureau-signed, verified by ${live.attest.verifiedBy} banks` : `credit ${live.attest.ficoBand} bureau-signed`
+    : null;
+  return (
+    <div className="engine">
+      <span className="tag done"><Shield width={11} height={11} />Live on Flower</span>
+      <span className="sub">{live.nodes ? `${live.nodes} SuperNodes` : 'starting run…'}{credit ? ` · ${credit}` : ''}{live.market ? ` · market ${live.market.pmms}%` : ''}</span>
+    </div>
+  );
 }

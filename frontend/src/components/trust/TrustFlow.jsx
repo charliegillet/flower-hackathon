@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import StageAnswers from './StageAnswers.jsx';
 import StageSeal from './StageSeal.jsx';
 import StageBanks from './StageBanks.jsx';
@@ -39,6 +39,15 @@ export default function TrustFlow({ user, onAccepted, onError }) {
   const [stage, setStage] = useState('answers');
   const [bands, setBands] = useState(null);
   const [ledgerOpen, setLedgerOpen] = useState(false);
+  // Disclosure ledger recorded by the real Flower run (null = show the policy summary).
+  const [ledger, setLedger] = useState(null);
+  const onLedger = useCallback((parties) => setLedger(parties), []);
+  useEffect(() => { if (stage !== 'banks') setLedger(null); }, [stage]);
+  // Editing any answer after "Fill with sample data" invalidates the demo consent token.
+  const editForm = useCallback((next) => setForm((prev) => {
+    const value = typeof next === 'function' ? next(prev) : next;
+    return value === SAMPLE_FORM || !value._consentToken ? value : (({ _consentToken, ...rest }) => rest)(value);
+  }), []);
   const reached = STAGES.findIndex((s) => s.key === stage);
 
   const principal = Number(form.amount) || 0;
@@ -61,23 +70,27 @@ export default function TrustFlow({ user, onAccepted, onError }) {
       </div>
 
       {stage === 'answers' && (
-        <StageAnswers form={form} setForm={setForm} onSeal={() => setStage('seal')} onFillSample={() => setForm(SAMPLE_FORM)} />
+        <StageAnswers form={form} setForm={editForm} onSeal={() => setStage('seal')} onFillSample={() => setForm(SAMPLE_FORM)} />
       )}
       {stage === 'seal' && (
         <StageSeal form={form} onBack={() => setStage('answers')} onApprove={(b) => { setBands(b); setStage('banks'); }} />
       )}
       {stage === 'banks' && bands && (
-        <StageBanks bands={bands} principal={principal} horizonYears={horizonYears} onOpenLedger={() => setLedgerOpen(true)} onAccept={(bank, offer) => onAccepted?.({ form, bands, bank, offer })} />
+        <StageBanks bands={bands} principal={principal} horizonYears={horizonYears} consentToken={form._consentToken || null} onLedger={onLedger} onOpenLedger={() => setLedgerOpen(true)} onAccept={(bank, offer) => onAccepted?.({ form, bands, bank, offer })} />
       )}
 
       {ledgerOpen && (
         <div className="scrim" onClick={() => setLedgerOpen(false)}>
           <div className="ledger" onClick={(e) => e.stopPropagation()}>
-            <div className="card-h row"><Lock width={18} height={18} /><div><h2>Disclosure ledger</h2><p className="sub">Who learned what, and what they never learned. Kept on your device.</p></div><span className="spacer" /><button type="button" className="btn ghost small" onClick={() => setLedgerOpen(false)}>Close</button></div>
+            <div className="card-h row"><Lock width={18} height={18} /><div><h2>Disclosure ledger</h2><p className="sub">{ledger ? 'Recorded by the Flower run: who learned what, and what they never learned.' : 'Who learned what, and what they never learned. Kept on your device.'}</p></div><span className="spacer" /><button type="button" className="btn ghost small" onClick={() => setLedgerOpen(false)}>Close</button></div>
+            {ledger ? ledger.map((p) => (
+              <LedgerRow key={p.party} who={`${p.party}${p.role === 'coordinator' ? '' : ` (${p.role})`}`} learned={p.learned.join('; ') || 'Nothing.'} never={p.never.join(', ')} amber={p.learned.some((x) => x.includes('refused'))} />
+            )) : <>
             <LedgerRow who="Each bank (6)" learned="The ranges in the sealed envelope, a bureau-signed credit range, and in round 2 one number: the best competing total cost." never="Your name, exact income, exact assets, exact score, SSN, employer, address, and any other bank's identity or offer." />
             <LedgerRow who="Credit bureau" learned="A one-time applicant code." never="Loan details, property price, which banks are bidding." />
             <LedgerRow who="Coordinator" learned="The ranges and the sealed quotes." never="Any exact value of yours. Any bank's rate sheet, margin or floor." />
             <LedgerRow who="Blocked requests" learned="U.S. Bank asked for exact income, assets and employer. Refused by the guard in code. Nothing sent." never="" amber />
+            </>}
           </div>
         </div>
       )}

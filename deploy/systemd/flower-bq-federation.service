@@ -1,0 +1,27 @@
+# BlindQuote local Flower federation: 1 SuperLink + bureau, borrower and 6 bank SuperNodes.
+# Install: replace /srv/flower-finance with the repo path, copy to /etc/systemd/system/, then
+#   systemctl daemon-reload && systemctl enable --now flower-bq-federation
+[Unit]
+Description=BlindQuote Flower federation (SuperLink + SuperNodes)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/srv/flower-finance
+ExecStart=/srv/flower-finance/.venv/bin/python deploy/local_federation.py run
+# Runs unprivileged: create the user first (sudo useradd --system --create-home --shell /usr/sbin/nologin flower)
+# and chown the repo to it, or change User/Group below. It writes <repo>/.flwr-local and ~/.flwr.
+User=flower
+Group=flower
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+Restart=on-failure
+RestartSec=5
+# The launcher stops every process group itself on SIGTERM.
+KillMode=mixed
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

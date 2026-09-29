@@ -1,0 +1,23 @@
+{
+  "name": "Citibank",
+  "persona": "a global bank that competes hard on rate for high credit bands and larger loans",
+  "par_rate": 6.73,
+  "rate_per_point": 0.2,
+  "margin_pts": 1.6,
+  "floor_pts": 0.15,
+  "fees": 1895,
+  "buydown_pts": 1.0,
+  "appetite": [
+    {
+      "min_loan": 600000,
+      "pts": -0.125
+    }
+  ],
+  "overlays": {
+    "min_fico": 640,
+    "max_dti": 50,
+    "max_ltv_band": ">95%"
+  },
+  "strategy": "win the deal: open a deep ladder whenever behind",
+  "pitch": "Citi: priced to win for strong credit."
+}

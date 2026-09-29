@@ -5,11 +5,43 @@ Loan application platform built at the Flower Collaborative Agent Hackathon (Sta
 A client submits their info to request a loan. A **bank agent** underwrites the application, and a
 **client agent** negotiates with it — the full agent-to-agent conversation is stored and shown in the UI.
 
+## Flower integration (BlindQuote engine)
+
+The **Banks** stage of the trust flow runs on real **Flower** agents:
+
+```
+browser (seals answers into ranges) ──► Node /api/flower (JWT) ──► bridge (ui/server.py)
+                                                                        │ starts a Flower AgentApp run
+          ┌─────────────────────────────────────────────────────────────┘
+   SuperLink coordinator (Endeavor) ── agent.grid ──► bureau SuperNode (signs the credit range)
+                                                  └─► 6 bank SuperNodes (private rate sheets; Endeavor / Kimi / MiniMax)
+```
+
+- Only the sealed ranges leave the browser. The stay horizon goes to the coordinator for ranking and is never sent to a bank.
+- Round 1: sealed quotes priced in code from each bank's private sheet (Freddie Mac PMMS + Fannie Mae LLPA grid).
+- Guard (code): U.S. Bank's request for exact income/assets is blocked; a misleading APR is flagged.
+- Round 2: each bank hears only its rank and % gap, answers with a price ladder; the coordinator takes the smallest rung that wins.
+- The app falls back to the in-browser simulation, labelled as such, when the bridge is offline.
+
+Run it locally:
+
+```bash
+uv sync && cp -n .env.example .env        # add FLWR_MODEL_API_KEY + Nebius keys
+uv run python scripts/gen_nodes.py
+uv run python deploy/local_federation.py up
+BQ_MODE=local uv run uvicorn ui.server:app --port 8765
+# backend: FLOWER_BRIDGE_URL=http://127.0.0.1:8765 in backend/.env, then npm run dev as below
+```
+
+Engine details: `docs/blindquote-engine.md`, event contract: `docs/event-schema.md`, deploy: `docs/deploy-flower.md`.
+Tests: `uv run pytest -q`. Flower Hub app: `blindquote/` (`uv run flwr app publish .`).
+
 ## Stack
 
 - **Frontend:** React + Vite (`frontend/`)
 - **Backend:** Node.js + Express (`backend/`)
 - **Database:** MongoDB (`MONGODB_URI`)
+- **Agents:** Flower AgentApp + SuperLink/SuperNodes (`blindquote/`), Python bridge (`ui/server.py`)
 
 ## Features
 

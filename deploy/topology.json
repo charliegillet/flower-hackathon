@@ -1,0 +1,112 @@
+{
+  "_comment": "Single source of truth for the six BlindQuote SuperNodes. data_dir is relative to the repo root locally and mounted at /data/<node> in containers. provider selects the upstream model for that node.",
+  "nodes": [
+    {
+      "key": "borrower",
+      "provider": null,
+      "node_config": {
+        "role": "borrower",
+        "name": "Borrower device",
+        "org_kind": "Your device (anonymous)",
+        "data_dir": "nodes/borrower"
+      },
+      "latlon": null
+    },
+    {
+      "key": "bureau",
+      "provider": null,
+      "node_config": {
+        "role": "bureau",
+        "name": "Pacific Credit Bureau",
+        "org_kind": "Credit bureau",
+        "location": "Costa Mesa, CA",
+        "data_dir": "nodes/bureau"
+      },
+      "latlon": "33.6411,-117.9187"
+    },
+    {
+      "key": "chase",
+      "provider": "flower",
+      "node_config": {
+        "role": "bank",
+        "bank_id": "chase",
+        "name": "Chase",
+        "org_kind": "Relationship bank",
+        "location": "New York, NY",
+        "model": "flwrlabs/endeavor-1.0",
+        "data_dir": "nodes/chase"
+      },
+      "latlon": "40.7128,-74.0060"
+    },
+    {
+      "key": "navy",
+      "provider": "nebius-kimi",
+      "node_config": {
+        "role": "bank",
+        "bank_id": "navy",
+        "name": "Navy Federal Credit Union",
+        "org_kind": "Credit union",
+        "location": "Vienna, VA",
+        "model": "dedicated/flowerai/Kimi-K2.7-Code-1OUHWL",
+        "data_dir": "nodes/navy"
+      },
+      "latlon": "38.9012,-77.2653"
+    },
+    {
+      "key": "citi",
+      "provider": "nebius-minimax",
+      "node_config": {
+        "role": "bank",
+        "bank_id": "citi",
+        "name": "Citibank",
+        "org_kind": "Global bank",
+        "location": "New York, NY",
+        "model": "dedicated/flowerai/MiniMax-M3-OOLI9o",
+        "data_dir": "nodes/citi"
+      },
+      "latlon": "40.7209,-74.0110"
+    },
+    {
+      "key": "usbank",
+      "provider": "nebius-kimi",
+      "node_config": {
+        "role": "bank",
+        "bank_id": "usbank",
+        "name": "U.S. Bank",
+        "org_kind": "National bank",
+        "location": "Minneapolis, MN",
+        "model": "dedicated/flowerai/Kimi-K2.7-Code-1OUHWL",
+        "data_dir": "nodes/usbank"
+      },
+      "latlon": "44.9778,-93.2650"
+    },
+    {
+      "key": "bofa",
+      "provider": "flower",
+      "node_config": {
+        "role": "bank",
+        "bank_id": "bofa",
+        "name": "Bank of America",
+        "org_kind": "National bank",
+        "location": "Charlotte, NC",
+        "model": "flwrlabs/endeavor-1.0",
+        "data_dir": "nodes/bofa"
+      },
+      "latlon": "35.2271,-80.8431"
+    },
+    {
+      "key": "wells",
+      "provider": "nebius-minimax",
+      "node_config": {
+        "role": "bank",
+        "bank_id": "wells",
+        "name": "Wells Fargo",
+        "org_kind": "National bank",
+        "location": "San Francisco, CA",
+        "model": "dedicated/flowerai/MiniMax-M3-OOLI9o",
+        "data_dir": "nodes/wells"
+      },
+      "latlon": "37.7749,-122.4194"
+    }
+  ]
+}
