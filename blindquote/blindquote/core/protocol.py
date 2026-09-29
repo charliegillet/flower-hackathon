@@ -16,16 +16,16 @@ ALLOWED_FIELDS: dict[str, set[str]] = {
     "bands_request": {"kind", "session"},
     "bands": {"kind", "session", "bands", "token", "withheld"},
     "attest_request": {"kind", "session", "token"},
-    "attestation": {"kind", "session", "fico_band", "token", "sig", "bureau"},
+    "attestation": {"kind", "session", "fico_band", "expires", "sig", "bureau"},
     "quote_request": {"kind", "session", "bands", "attestation", "round"},
     "quote": {
         "kind", "session", "round", "bank", "eligible", "reason", "options",
-        "apr_stated", "note", "request_fields", "model",
+        "apr_stated", "note", "request_fields", "model", "attestation_ok",
     },
     "counter_request": {"kind", "session", "bands", "attestation", "round", "best_competing_total", "your_offer"},
     "counter": {
         "kind", "session", "round", "bank", "decision", "options", "apr_stated",
-        "note", "request_fields", "model",
+        "note", "request_fields", "model", "attestation_ok",
     },
     "error": {"kind", "message"},
 }

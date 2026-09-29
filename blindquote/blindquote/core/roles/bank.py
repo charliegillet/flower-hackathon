@@ -6,6 +6,7 @@ prices come from the rate sheet and every discount is clamped to the floor.
 
 from __future__ import annotations
 
+import time
 from typing import Any
 
 from .. import attest, pricing
@@ -20,7 +21,14 @@ def _verify(msg: dict[str, Any], cfg: dict[str, Any]) -> str | None:
     except RuntimeError:
         return None
     band = str(att.get("fico_band", ""))
-    if band and attest.verify(key, band, str(att.get("token", "")), str(att.get("sig", ""))):
+    session = str(att.get("session", ""))
+    try:
+        expires = int(att.get("expires", 0))
+    except (TypeError, ValueError):
+        return None
+    if session != str(msg.get("session", "")) or expires < time.time():
+        return None  # attestation from another session, or expired
+    if band and attest.verify(key, band, session, expires, str(att.get("sig", ""))):
         return band
     return None
 
@@ -52,6 +60,7 @@ def _quote_reply(kind: str, msg: dict[str, Any], sheet: dict[str, Any], cfg: dic
         "round": msg.get("round", 1),
         "bank": sheet["name"],
         "model": cfg.get("model") or None,
+        "attestation_ok": _verify(msg, cfg) is not None,
         **extra,
     }
     greedy = bool(sheet.get("greedy"))

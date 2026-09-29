@@ -22,9 +22,10 @@ def load_key(key_file: str | None = None) -> bytes:
     raise RuntimeError("No attestation key: set node_config hmac_key_file or BUREAU_HMAC_KEY")
 
 
-def sign(key: bytes, fico_band: str, token: str) -> str:
-    return hmac.new(key, f"{fico_band}|{token}".encode(), hashlib.sha256).hexdigest()
+def sign(key: bytes, fico_band: str, session: str, expires: int) -> str:
+    """Sign a band for one negotiation session only (unlinkable across sessions, not replayable)."""
+    return hmac.new(key, f"{fico_band}|{session}|{expires}".encode(), hashlib.sha256).hexdigest()
 
 
-def verify(key: bytes, fico_band: str, token: str, sig: str) -> bool:
-    return hmac.compare_digest(sign(key, fico_band, token), sig or "")
+def verify(key: bytes, fico_band: str, session: str, expires: int, sig: str) -> bool:
+    return hmac.compare_digest(sign(key, fico_band, session, expires), sig or "")

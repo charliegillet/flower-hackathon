@@ -39,6 +39,7 @@ class BankState:
     name: str
     model: str | None
     round1: dict[str, Any] | None = None
+    attested: bool | None = None
     final: dict[str, Any] | None = None
     flags: list[str] = field(default_factory=list)
 
@@ -62,6 +63,7 @@ class Coordinator:
         self.session = secrets.token_hex(6)
         self.ledger = Ledger()
         self.nodes: dict[str, dict[str, Any]] = {}
+        self.bureau_name = "Credit Bureau"
 
     # ------------------------------------------------------------------ grid
     def _exchange(self, sends: list[tuple[str, dict[str, Any]]], timeout: float, on_reply: Callable[[str, dict[str, Any]], None]) -> list[str]:
@@ -200,10 +202,12 @@ class Coordinator:
         self._exchange([(bureau, {"kind": "attest_request", "session": self.session, "token": token})], self.t.attest, on_reply)
         if not out:
             raise RuntimeError("Bureau node did not reply in time")
-        att = {k: out[k] for k in ("fico_band", "token", "sig")}
+        # Banks get a session-bound, expiring attestation, never the consent token.
+        att = {k: out[k] for k in ("fico_band", "session", "expires", "sig")}
+        self.bureau_name = out.get("bureau", self.nodes[bureau]["name"])
         ev.msg(bureau, COORD, "attestation", f"FICO {out['fico_band']} (signed)", ["fico_band", "sig"])
-        ev.emit("bq.attest", bureau=out.get("bureau", self.nodes[bureau]["name"]), fico_band=out["fico_band"],
-                signature_ok=bool(out.get("sig")))
+        # The coordinator holds no verification key: banks verify, and report back in round 1.
+        ev.emit("bq.attest", bureau=self.bureau_name, fico_band=out["fico_band"], signature_ok=None, verified_by=0)
         self.ledger.learn("BlindQuote Coordinator", f"FICO band {out['fico_band']}")
         self.ledger.learn(self.nodes[bureau]["name"], "a one-time consent token")
         ev.stage("attest", "done", f"FICO band {out['fico_band']} attested")
@@ -265,7 +269,7 @@ class Coordinator:
         for nid in states:
             ev.msg(COORD, nid, "quote_request", "Sealed quote request", ["bands", "attestation"], sealed=True)
             for item in (f"loan {bands['loan_band']}", f"LTV {bands['ltv_band']}", f"DTI {bands['dti_band']}",
-                         f"FICO band {att['fico_band']} (attested)"):
+                         f"FICO band {att['fico_band']} (attested for this session only)"):
                 self.ledger.learn(states[nid].name, item)
 
         def on_reply(nid: str, msg: dict[str, Any]) -> None:
@@ -280,6 +284,7 @@ class Coordinator:
                         requested=exc.fields, detail=exc.detail, action="blocked")
                 return
             ev.msg(nid, COORD, "quote", "Sealed quote", ["options", "note"], sealed=True)
+            st.attested = msg.get("attestation_ok") is True
             self._check_requests(st, msg, 1)
             if not msg.get("eligible"):
                 ev.emit("bq.decline", bank=st.name, round=1, reason=str(msg.get("reason", "ineligible")),
@@ -297,6 +302,10 @@ class Coordinator:
                  for nid in states]
         for nid in self._exchange(sends, self.t.quote, self._isolated(states, 1, on_reply)):
             ev.emit("bq.decline", bank=states[nid].name, round=1, reason="timeout", message="No reply before the deadline")
+        reported = [st.attested for st in states.values() if st.attested is not None]
+        if reported:
+            ev.emit("bq.attest", bureau=self.bureau_name, fico_band=att["fico_band"],
+                    signature_ok=all(reported), verified_by=sum(reported))
         ev.stage("round1", "done", f"{sum(1 for s in states.values() if s.round1)} sealed quotes")
 
     def _round2(self, states: dict[str, BankState], bands: dict[str, Any], att: dict[str, Any]) -> None:

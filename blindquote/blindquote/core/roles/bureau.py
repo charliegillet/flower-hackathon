@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import time
 from typing import Any
 
 from .. import attest, pricing
 from ..llm import LLM
+
+ATTESTATION_TTL_S = 15 * 60
 
 
 def handle(msg: dict[str, Any], cfg: dict[str, Any], llm: LLM) -> dict[str, Any]:
@@ -20,11 +23,13 @@ def handle(msg: dict[str, Any], cfg: dict[str, Any], llm: LLM) -> dict[str, Any]
         return {"kind": "error", "message": "unknown or expired consent token"}
     band = pricing.fico_band(int(record["score"]))
     key = attest.load_key(cfg.get("hmac_key_file"))
+    session = str(msg.get("session", ""))
+    expires = int(time.time()) + ATTESTATION_TTL_S
     return {
         "kind": "attestation",
-        "session": msg.get("session"),
+        "session": session,
         "fico_band": band,
-        "token": token,
-        "sig": attest.sign(key, band, token),
+        "expires": expires,
+        "sig": attest.sign(key, band, session, expires),
         "bureau": cfg.get("name", "Credit Bureau"),
     }

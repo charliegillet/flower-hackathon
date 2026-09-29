@@ -60,9 +60,10 @@ def test_guard_blocks_raw_fields_and_non_band_fields():
 # ------------------------------------------------------------ attestation
 def test_attestation_signature_verifies_and_detects_tampering():
     key = b"k" * 32
-    sig = attest.sign(key, "740-759", "tok")
-    assert attest.verify(key, "740-759", "tok", sig)
-    assert not attest.verify(key, ">=780", "tok", sig)
+    sig = attest.sign(key, "740-759", "session-1", 2_000_000_000)
+    assert attest.verify(key, "740-759", "session-1", 2_000_000_000, sig)
+    assert not attest.verify(key, ">=780", "session-1", 2_000_000_000, sig)
+    assert not attest.verify(key, "740-759", "session-2", 2_000_000_000, sig)  # no replay across sessions
 
 
 def _cfg(node: str, role: str) -> dict:
@@ -72,12 +73,12 @@ def _cfg(node: str, role: str) -> dict:
 def test_bureau_rejects_unknown_token_and_bank_rejects_forged_band():
     bureau = handle_node_message({"kind": "attest_request", "session": "s", "token": "nope"}, _cfg("bureau", "bureau"), NO_LLM)
     assert bureau["kind"] == "error"
-    forged = {"fico_band": ">=780", "token": "consent_7f3a9c2e41", "sig": "0" * 64}
+    forged = {"fico_band": ">=780", "session": "s", "expires": 2_000_000_000, "sig": "0" * 64}
     bands = {"loan_band": "$650k-$700k", "loan_mid": 675_000, "ltv_band": "75.01-80%", "dti_band": "36.01-43%",
              "horizon_years": 7, "term_years": 30}
     quote = handle_node_message({"kind": "quote_request", "session": "s", "round": 1, "bands": bands, "attestation": forged},
                                 _cfg("bank-a", "bank"), NO_LLM)
-    assert quote["kind"] == "quote" and quote["eligible"] is False
+    assert quote["kind"] == "quote" and quote["eligible"] is False and quote["attestation_ok"] is False
 
 
 def test_horizon_parsing_ignores_loan_term():
@@ -183,3 +184,11 @@ def test_apr_sent_as_text_is_flagged(monkeypatch):
     Coordinator(grid, Emitter(events.append), NO_LLM, timeouts=Timeouts(5, 5, 5, 10, 10), mode="sim").run("x")
     grid.close()
     assert any(e["type"] == "bq.guard" and e["bank"] == "Cardinal Bank" and e["violation"] == "apr_mismatch" for e in events)
+
+
+def test_banks_never_see_the_consent_token_and_verify_the_band(run_events):
+    events, _ = run_events
+    assert "consent_7f3a9c2e41" not in json.dumps(events)
+    attests = [e for e in events if e["type"] == "bq.attest"]
+    assert attests[0]["signature_ok"] is None and attests[-1]["signature_ok"] is True
+    assert attests[-1]["verified_by"] == 4
