@@ -71,8 +71,12 @@ class Coordinator:
 
     # ------------------------------------------------------------------ grid
     def _exchange(self, sends: list[tuple[str, dict[str, Any]]], timeout: float, on_reply: Callable[[str, dict[str, Any]], None]) -> list[str]:
-        """Push messages, then poll so replies surface as they arrive. Returns node ids that timed out."""
+        """Push messages, then poll so replies surface as they arrive.
+
+        Returns node ids that never replied: rejected by the grid or timed out.
+        """
         ids = self.grid.push([(dst, encode(msg)) for dst, msg in sends])
+        rejected = [dst for mid, (dst, _) in zip(ids, sends) if not mid]
         pending = {mid: dst for mid, (dst, _) in zip(ids, sends) if mid}
         # Never let one stage eat the time reserved for the verdict.
         timeout = max(min(timeout, self.remaining - VERDICT_RESERVE_S), 1.0)
@@ -87,7 +91,7 @@ class Coordinator:
                     on_reply(dst, {"kind": "error", "message": str(rep["error"])})
                 else:
                     on_reply(dst, decode(rep.get("payload")))
-        return list(pending.values())
+        return rejected + list(pending.values())
 
     @property
     def remaining(self) -> float:
