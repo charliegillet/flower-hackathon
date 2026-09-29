@@ -1,1 +1,2 @@
 {"t":0,"agent":"aae75ff","agent_type":"workflow-subagent","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"system","event":"skill_invoked","skill_name":"last30days:last30days"}
