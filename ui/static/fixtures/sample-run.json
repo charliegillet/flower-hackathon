@@ -968,7 +968,8 @@
   },
   {
    "type": "response.output_text.delta",
-   "delta": "### BlindQuote result\n\n| # | Lender | Rate | Points | Fees | APR | Total cost | Flags |\n|---|---|---|---|---|---|---|---|\n| 1 | Bay Mortgage Co. | 6.750% | 0.80 | $1,895 | 6.856% | $312,866 | - |\n| 2 | Golden Gate Credit Union | 6.875% | 0.57 | $995 | 6.946% | $316,334 | - |\n| 3 | Cardinal Bank | 7.000% | 0.62 | $1,495 | 7.084% | $323,185 | - |\n| 4 | Rapid Lending Co. | 6.875% | 1.09 | $2,995 | 7.028% | $321,905 | requested raw data (blocked), misleading APR |\n\n"
+   "delta": "### BlindQuote result\n\n| # | Lender | Rate | Points | Fees | APR | Total cost | Flags |\n|---|---|---|---|---|---|---|---|\n| 1 | Bay Mortgage Co. | 6.750% | 0.80 | $1,895 | 6.856% | $312,866 | - |\n| 2 | Golden Gate Credit Union | 6.875% | 0.57 | $995 | 6.946% | $316,334 | - |\n| 3 | Cardinal Bank | 7.000% | 0.62 | $1,495 | 7.084% | $323,185 | - |\n| 4 | Rapid Lending Co. | 6.875% | 1.09 | $2,995 | 7.028% | $321,905 | requested raw data (blocked), misleading APR |\n\n",
+   "ts": 62.515
   },
   {
    "content_index": 0,
@@ -977,7 +978,8 @@
    "logprobs": [],
    "output_index": 0,
    "sequence_number": 5,
-   "type": "response.output_text.delta"
+   "type": "response.output_text.delta",
+   "ts": 62.515
   },
   {
    "response": {
@@ -1034,13 +1036,15 @@
     "store": false
    },
    "sequence_number": 9,
-   "type": "response.completed"
+   "type": "response.completed",
+   "ts": 62.515
   },
   {
    "type": "response.completed",
    "response": {
     "output": []
-   }
+   },
+   "ts": 62.515
   },
   {
    "type": "bq.done",
