@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BlindQuote Trust Console</title>
+<meta name="description" content="Interactive prototype: see every agent step, what leaves your device as a range, and what never leaves.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F4F6F9; --panel:#FFFFFF; --line:#DDE2EA; --line-soft:#EEF1F6; --ink:#101A2B; --muted:#5B6778;
+  --slate:#2F3E56; --slate-soft:#EEF1F6;
+  --blue:#1E4B86; --blue-soft:#E7EFF9; --blue-tint:#F3F7FC; --blue-line:#C9D7EA;
+  --amber:#6B4300; --amber-fill:#D9A441; --amber-soft:#F6E3B8; --amber-tint:#FFF8EA; --amber-line:#F0D9A8;
+  --green:#1F6B45; --green-soft:#EEF6F0; --green-line:#CFE3D6;
+  --serif:'Newsreader',Georgia,serif; --sans:'IBM Plex Sans',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.4}
+button{font:inherit;color:inherit;cursor:pointer}
+a{color:var(--blue)}
+h1,h2,h3{margin:0}
+.app{min-height:100vh;display:flex;flex-direction:column}
+header.top{height:64px;padding:0 24px;display:flex;align-items:center;gap:16px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--serif);font-size:22px;font-weight:600;letter-spacing:-.01em}
+nav.tabs{display:flex;gap:4px;margin-left:16px}
+nav.tabs button{padding:8px 12px;border-radius:8px;border:none;background:none;color:var(--muted)}
+nav.tabs button.active{background:var(--blue-soft);color:var(--blue);font-weight:600}
+.spacer{flex:1}
+.pill{display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;font-size:13px;border:1px solid var(--line);background:var(--slate-soft);color:var(--slate)}
+.pill.ok{background:var(--green-soft);border-color:var(--green-line);color:var(--green);font-weight:600}
+.pill .dot{width:8px;height:8px;border-radius:50%;background:var(--blue)}
+.pill .dot.live{animation:blink 1.2s infinite}
+@keyframes blink{50%{opacity:.25}}
+.runbtn{padding:8px 14px;border-radius:8px;border:none;background:var(--blue);color:#fff;font-weight:600}
+.runbtn.secondary{background:var(--panel);color:var(--slate);border:1px solid var(--line)}
+
+main{flex:1;padding:16px 20px 20px}
+.view{display:none}.view.active{display:block}
+.cols{display:grid;grid-template-columns:340px minmax(0,1fr) 400px;gap:16px;min-height:calc(100vh - 100px)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;display:flex;flex-direction:column;overflow:hidden}
+.card-h{padding:16px 18px 12px;border-bottom:1px solid var(--line-soft);display:flex;flex-direction:column;gap:4px}
+.card-h h2{font-family:var(--serif);font-size:20px;font-weight:600}
+.card-h .row{display:flex;align-items:baseline;gap:8px}
+.sub{font-size:12px;color:var(--muted);line-height:1.5}
+.section-label{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:10px 6px 4px}
+.list{padding:8px 12px;display:flex;flex-direction:column;gap:6px}
+
+.agent{text-align:left;display:flex;gap:12px;align-items:center;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel);transition:border-color .15s,background .15s}
+.agent:hover{border-color:var(--blue-line);background:var(--blue-tint)}
+.agent.selected{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue-soft)}
+.agent.flag{border-color:var(--amber-line);background:var(--amber-tint)}
+.agent .ic{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:600}
+.agent .txt{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.agent .name{font-weight:600}
+.agent .st{font-size:12px;color:var(--muted)}
+.agent.flag .st{color:var(--amber)}
+.tag{font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.tag.idle{background:var(--slate-soft);color:var(--slate)}
+.tag.work{background:var(--blue-soft);color:var(--blue)}
+.tag.done{background:var(--green-soft);color:var(--green)}
+.tag.warn{background:var(--amber-soft);color:var(--amber)}
+.tag.shared{background:var(--blue-soft);color:var(--blue)}
+.tag.local{background:var(--slate-soft);color:var(--slate)}
+.tag.sealed{background:var(--green-soft);color:var(--green)}
+.tag.blocked{background:var(--amber-soft);color:var(--amber)}
+
+.mid{display:flex;flex-direction:column;gap:14px;min-height:0}
+.summary{padding:18px 20px 16px;gap:14px}
+.summary .head{display:flex;align-items:baseline;justify-content:space-between}
+.summary h2{font-family:var(--serif);font-size:22px;font-weight:600}
+.bands{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;min-height:86px}
+.band{text-align:left;display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:10px;border:1px solid var(--blue-line);background:var(--blue-tint);animation:pop .25s ease-out}
+.band:hover{border-color:var(--blue)}
+.band .k{font-size:11px;color:var(--muted);font-weight:600}
+.band .v{font-family:var(--mono);font-size:17px;font-weight:500;color:var(--blue)}
+.band .n{font-size:11px;color:var(--muted)}
+.band .n.ok{color:var(--green);display:flex;align-items:center;gap:4px}
+.band.empty{border:2px dashed var(--blue-line);background:transparent;align-items:center;justify-content:center;color:var(--muted);font-size:12px;text-align:center}
+.band.over{border-color:var(--blue);background:var(--blue-soft)}
+@keyframes pop{from{transform:scale(.96);opacity:0}to{transform:none;opacity:1}}
+.legend{display:flex;gap:18px;align-items:center;padding-top:8px;border-top:1px solid var(--line-soft);font-size:13px;color:var(--slate);flex-wrap:wrap}
+.legend span{display:flex;align-items:center;gap:8px}
+.legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.legend .amb{color:var(--amber)}
+
+.feed{flex:1;min-height:0}
+.feed-h{padding:14px 20px 10px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;gap:12px}
+.feed-h h3{font-size:15px;font-weight:600}
+.steps{display:flex;flex-direction:column;padding:6px 8px}
+.step{text-align:left;display:grid;grid-template-columns:52px 28px minmax(0,1fr) 120px;gap:12px;align-items:center;padding:10px 12px;border-radius:10px;border:1px solid transparent;background:transparent;animation:pop .3s ease-out}
+.step:hover{background:var(--paper)}
+.step.selected{border-color:var(--blue);background:var(--blue-tint)}
+.step.blocked{border-color:var(--amber-line);background:var(--amber-tint)}
+.step .t{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.step .ic{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
+.step .body{display:flex;flex-direction:column;gap:1px;min-width:0}
+.step .title{font-weight:500}
+.step.blocked .title{font-weight:600;color:var(--amber)}
+.step .d{font-size:12px;color:var(--muted)}
+.step.blocked .d{color:var(--amber)}
+.step .tag{justify-self:end}
+.waiting{display:grid;grid-template-columns:52px 28px minmax(0,1fr);gap:12px;align-items:center;padding:10px 12px;color:var(--muted);font-size:13px}
+.waiting .ic{width:26px;height:26px;border-radius:7px;border:2px dashed var(--blue-line)}
+.waiting .t{font-family:var(--mono);font-size:12px}
+
+.vault .item{display:grid;grid-template-columns:16px minmax(0,1fr) auto 20px;gap:10px;align-items:center;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel)}
+.vault .item.drag{cursor:grab}
+.vault .item.drag:active{cursor:grabbing}
+.vault .item.dragging{opacity:.5}
+.vault .item.hidden{background:#F7F8FA;border-color:#E4E8EF}
+.vault .item .k{font-size:12px;color:var(--muted)}
+.vault .item .v{font-family:var(--mono);font-size:15px;font-weight:500}
+.vault .item .v.txt{font-family:var(--sans)}
+.vault .item .grip{color:#9AA5B5}
+.dropzone{margin:0 12px 12px;padding:14px;border-radius:10px;border:2px dashed var(--blue-line);background:#F9FBFE;display:flex;flex-direction:column;gap:4px;align-items:center;text-align:center}
+.dropzone b{font-size:13px;color:var(--blue)}
+.dropzone span{font-size:12px;color:var(--muted)}
+.footnote{padding:12px 18px 16px;border-top:1px solid var(--line-soft);font-size:12px;color:var(--muted);line-height:1.5}
+
+/* drawer */
+.scrim{position:fixed;inset:0;background:rgba(16,26,43,.35);display:none;z-index:20}
+.scrim.open{display:block}
+.drawer{position:fixed;top:0;right:0;height:100vh;width:680px;max-width:100vw;background:var(--panel);border-left:1px solid var(--line);box-shadow:-12px 0 40px rgba(16,26,43,.12);transform:translateX(100%);transition:transform .25s ease;z-index:30;display:flex;flex-direction:column;overflow:hidden}
+.drawer.open{transform:none}
+.dh{padding:20px 24px 16px;border-bottom:1px solid var(--line-soft);display:flex;align-items:flex-start;gap:14px}
+.dh.amber{background:var(--amber-tint)}
+.dh .ic{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.dh .kicker{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.dh.amber .kicker{color:var(--amber)}
+.dh h2{font-family:var(--serif);font-size:24px;font-weight:600;line-height:1.2;margin-top:4px}
+.dh .x{width:36px;height:36px;border-radius:8px;border:1px solid var(--line);background:var(--panel);display:flex;align-items:center;justify-content:center}
+.db{padding:20px 24px;display:flex;flex-direction:column;gap:18px;overflow:auto;flex:1}
+.db h3{font-size:14px;font-weight:600}
+.ba{display:grid;grid-template-columns:minmax(0,1fr) 40px minmax(0,1fr);gap:12px}
+.box{padding:16px;border-radius:12px;display:flex;flex-direction:column;gap:8px}
+.box.local{background:var(--slate-soft);border:1px solid var(--line)}
+.box.shared{background:var(--blue-tint);border:1px solid var(--blue-line)}
+.box .lbl{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600}
+.box.local .lbl{color:var(--slate)}
+.box.shared .lbl{color:var(--blue)}
+.box .big{font-family:var(--mono);font-size:22px;font-weight:500}
+.box.shared .big{color:var(--blue)}
+.arrow{display:flex;align-items:center;justify-content:center}
+.quote{padding:14px 16px;border-radius:10px;background:#F7F8FA;border:1px solid #E4E8EF;line-height:1.55}
+.code{padding:12px 16px;border-radius:10px;background:var(--ink);color:#DCE3EE;font-family:var(--mono);font-size:12px;line-height:1.6;white-space:pre-wrap}
+.checks{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.checks li{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:8px;border:1px solid var(--green-line);background:#F4FAF6;font-size:13px}
+.numbered{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.numbered li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:start;padding:12px;border-radius:8px;border:1px solid #E4E8EF;font-size:13px;line-height:1.5}
+.numbered .n{width:26px;height:26px;border-radius:50%;background:var(--slate);color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{font-size:12px;font-weight:600;color:var(--amber);background:var(--amber-soft);padding:4px 10px;border-radius:999px}
+.note{padding:14px 16px;border-radius:10px;background:var(--slate-soft);border:1px solid var(--line);display:flex;gap:12px;align-items:center;font-size:13px;line-height:1.5;color:var(--slate)}
+.df{padding:14px 24px 18px;border-top:1px solid var(--line-soft);display:flex;gap:10px;align-items:center}
+.btn{padding:10px 16px;border-radius:8px;border:1px solid var(--line);background:var(--panel);font-weight:600;color:var(--slate)}
+.btn.primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.transcript{display:flex;flex-direction:column;gap:8px}
+.msg{padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.5;max-width:90%}
+.msg .who{font-size:11px;color:var(--muted);font-weight:600;display:block;margin-bottom:2px}
+.msg.in{align-self:flex-start;background:#F7F8FA;border:1px solid #E4E8EF}
+.msg.out{align-self:flex-end;background:var(--blue-tint);border:1px solid var(--blue-line)}
+.msg.blocked{align-self:flex-start;background:var(--amber-tint);border:1px solid var(--amber-line);color:var(--amber)}
+
+/* ledger view */
+.ledger{display:grid;grid-template-columns:minmax(0,1fr) 520px;gap:16px}
+.win{padding:20px 22px;gap:14px}
+.win .head{display:flex;align-items:baseline;justify-content:space-between}
+.win h2{font-family:var(--serif);font-size:24px;font-weight:600}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.kpi{padding:14px;border-radius:10px;border:1px solid #E4E8EF;background:#F7F8FA;display:flex;flex-direction:column;gap:4px}
+.kpi .k{font-size:11px;color:var(--muted);font-weight:600}
+.kpi .v{font-family:var(--mono);font-size:22px;font-weight:500}
+.kpi.blue{background:var(--blue-tint);border-color:var(--blue-line)}
+.kpi.blue .v{font-family:var(--sans);font-size:18px;font-weight:600;color:var(--blue)}
+.kpi.green{background:var(--green-soft);border-color:var(--green-line)}
+.kpi.green .k,.kpi.green .v,.kpi.green .n{color:var(--green)}
+.kpi .n{font-size:12px;color:var(--muted)}
+.qt{display:grid;grid-template-columns:40px minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1.2fr) minmax(0,1.4fr);gap:12px;align-items:center;padding:12px 14px;border-radius:10px;border:1px solid transparent;text-align:left;background:transparent;width:100%}
+.qt.h{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line-soft);border-radius:0}
+.qt:not(.h):hover{background:var(--paper)}
+.qt.win1{background:var(--blue-tint);border-color:var(--blue-line)}
+.qt.flag{background:var(--amber-tint);border-color:var(--amber-line)}
+.qt .m{font-family:var(--mono)}
+.qt .g{font-size:12px;color:var(--green);font-weight:600}
+.qt .mu{font-size:12px;color:var(--muted)}
+.qt .am{font-size:12px;color:var(--amber);font-weight:600}
+.lg{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.lg .lh{padding:10px 14px;background:#F7F8FA;font-weight:600;display:flex;align-items:center;gap:10px}
+.lg.amber{border-color:var(--amber-line)}
+.lg.amber .lh{background:var(--amber-tint);color:var(--amber)}
+.lg .two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+.lg .two>div{padding:12px 14px;display:flex;flex-direction:column;gap:6px;font-size:12px;line-height:1.6;color:var(--slate)}
+.lg .two>div:first-child{border-right:1px solid var(--line-soft)}
+.lg .lbl{font-size:11px;font-weight:600;display:flex;align-items:center;gap:5px}
+.lg .lbl.b{color:var(--blue)}
+.lg .lbl.s{color:var(--slate)}
+.lg .one{padding:12px 14px;font-size:12px;line-height:1.6;color:var(--slate)}
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;transition:all .25s;z-index:40;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%)}
+
+@media (max-width:1100px){.cols{grid-template-columns:1fr}.ledger{grid-template-columns:1fr}.bands{grid-template-columns:repeat(2,minmax(0,1fr))}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:640px){header.top{flex-wrap:wrap;height:auto;padding:10px 16px;gap:8px}main{padding:12px 16px 16px}.step{grid-template-columns:44px 28px minmax(0,1fr)}.step .tag{display:none}.qt{grid-template-columns:32px minmax(0,1.4fr) minmax(0,1fr) minmax(0,1.2fr)}.qt .hide{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="top">
+  <div class="brand">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1E4B86" stroke-width="1.8" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 7.8-8 9-4.6-1.2-8-4.5-8-9V6l8-3z"/><path d="M8.5 12l2.3 2.3L15.5 9.6"/></svg>
+    BlindQuote
+  </div>
+  <nav class="tabs" aria-label="Views">
+    <button data-view="run" class="active">Live run</button>
+    <button data-view="ledger">Quotes &amp; ledger</button>
+  </nav>
+  <div class="spacer"></div>
+  <div class="pill" id="statusPill"><span class="dot"></span><span id="statusText">Ready to run</span></div>
+  <div class="pill ok"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Raw data has never left this device</div>
+  <button class="runbtn" id="runBtn">Start run</button>
+  <button class="runbtn secondary" id="resetBtn">Reset</button>
+</header>
+
+<main>
+<!-- ================= LIVE RUN ================= -->
+<section class="view active" id="view-run">
+<div class="cols">
+
+  <!-- LEFT -->
+  <aside class="card">
+    <div class="card-h"><div class="row"><h2>Who is working</h2><span class="sub">7 agents</span></div></div>
+    <div class="list" id="agentList"></div>
+    <div class="spacer"></div>
+    <div class="footnote">Click any agent to see every message it sent and received, word for word.</div>
+  </aside>
+
+  <!-- MIDDLE -->
+  <section class="mid">
+    <div class="card summary">
+      <div class="head"><h2>What the banks can see</h2><span class="sub">Ranges only. No exact numbers, no name.</span></div>
+      <div class="bands" id="bands"></div>
+      <div class="legend">
+        <span><i style="background:var(--blue)"></i><b id="cShared">0</b>&nbsp;ranges shared with 4 banks</span>
+        <span><i style="background:var(--slate)"></i><b id="cLocal">9</b>&nbsp;exact values kept on this device</span>
+        <span class="amb"><i style="background:var(--amber-fill)"></i><b id="cBlocked">0</b>&nbsp;requests for more data blocked</span>
+        <span class="spacer"></span>
+        <a href="#" data-view="ledger" style="font-weight:600;text-decoration:none">Open full ledger</a>
+      </div>
+    </div>
+    <div class="card feed">
+      <div class="feed-h"><h3>Every step, as it happens</h3><span class="sub">Click a step to read the exact message</span><span class="spacer"></span><span class="sub" id="roundLabel">Not started</span></div>
+      <div class="steps" id="steps"></div>
+    </div>
+  </section>
+
+  <!-- RIGHT -->
+  <aside class="card vault">
+    <div class="card-h">
+      <div class="row"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2F3E56" stroke-width="2" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><h2>Your data, on your device</h2></div>
+      <p class="sub">Drag an item into the middle to share it as a range. Locked items are never sent as-is.</p>
+    </div>
+    <div class="list" id="vault"></div>
+    <div class="spacer"></div>
+    <div class="dropzone"><b>Drag a value into "What the banks can see"</b><span>You will see the range before anything is sent.</span></div>
+  </aside>
+</div>
+</section>
+
+<!-- ================= LEDGER ================= -->
+<section class="view" id="view-ledger">
+<div class="ledger">
+  <section class="mid">
+    <div class="card win">
+      <div class="head"><h2>Your best offer</h2><span class="sub">Ranked by total cost over the 7 years you plan to stay</span></div>
+      <div class="kpis" id="kpis"></div>
+    </div>
+    <div class="card" style="padding:6px 8px 8px">
+      <div class="qt h"><span>Rank</span><span>Bank</span><span>Rate</span><span class="hide">Points</span><span>7-yr total</span><span class="hide">Round 2</span></div>
+      <div id="quotes"></div>
+      <div class="sub" style="padding:12px 14px 6px">The lowest headline rate is not the cheapest. Points and fees decide the real cost, and a bank that asks for data it is not allowed to see is flagged.</div>
+    </div>
+  </section>
+  <aside class="card">
+    <div class="card-h"><h2>Disclosure ledger</h2><p class="sub">Who learned what, and what they never learned. Kept on your device.</p></div>
+    <div class="list" id="ledgerList" style="gap:10px;padding:12px 14px"></div>
+    <div class="spacer"></div>
+    <div class="df"><button class="btn" style="flex:1" id="exportBtn">Export ledger</button><button class="btn primary" style="flex:1" id="acceptBtn">Accept best offer</button></div>
+  </aside>
+</div>
+</section>
+</main>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-live="polite"></aside>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- Data ---------- */
+const AGENTS = [
+  {id:'device', group:'Your side', name:'Your device', ic:'device', color:'#1E4B86', st:'Holds your 9 exact values', tag:['idle','Idle']},
+  {id:'coord', group:'Your side', name:'Coordinator', ic:'clock', color:'#2F3E56', st:'Passes ranges to banks, collects sealed bids', tag:['idle','Idle']},
+  {id:'bureau', group:'Your side', name:'Credit bureau', ic:'shield', color:'#2F3E56', st:'Confirms a credit range, keeps the exact score', tag:['idle','Idle']},
+  {id:'A', group:'Banks bidding', name:'Cardinal Bank', letter:'A', st:'Waiting for ranges', tag:['idle','Idle']},
+  {id:'B', group:'Banks bidding', name:'Bayline Credit Union', letter:'B', st:'Waiting for ranges', tag:['idle','Idle']},
+  {id:'C', group:'Banks bidding', name:'Redwood Mortgage', letter:'C', st:'Waiting for ranges', tag:['idle','Idle']},
+  {id:'D', group:'Banks bidding', name:'Summit Lending', letter:'D', st:'Waiting for ranges', tag:['idle','Idle']},
+];
+const VAULT = [
+  {id:'income', k:'Annual income', v:'$142,000', band:'dti', canDrag:true},
+  {id:'debt', k:'Monthly debt payments', v:'$3,850', band:'dti', canDrag:true},
+  {id:'score', k:'Credit score', v:'752', band:'fico', canDrag:true},
+  {id:'price', k:'Home price', v:'$850,000', band:'ltv', canDrag:true},
+  {id:'loan', k:'Loan amount', v:'$680,000', band:'loan', canDrag:true},
+  {id:'assets', k:'Savings and assets', v:'$218,400', band:'assets', canDrag:true, optional:true},
+  {id:'name', k:'Full name', v:'Maya R. Okafor', txt:true, never:true},
+  {id:'ssn', k:'Social Security number', v:'•••-••-4471', never:true},
+  {id:'emp', k:'Employer and address', v:'2 fields', txt:true, never:true},
+];
+const BANDS = {
+  fico:{k:'Credit score', v:'740–759', n:'Bureau-signed', ok:true, from:['score'], plain:'Credit range 740–759, signed by the bureau', raw:'"fico_band": "740-759", "sig": "a91c…"'},
+  ltv:{k:'Loan vs. home value', v:'75–80%', n:'from 2 hidden values', from:['price','loan'], plain:'Loan vs. home value of 75–80%', raw:'"ltv_band": "75-80"'},
+  dti:{k:'Debt vs. income', v:'30–35%', n:'from 2 hidden values', from:['income','debt'], plain:'Debt vs. income of 30–35%', raw:'"dti_band": "30-35"'},
+  loan:{k:'Loan amount', v:'$600–700k', n:'rounded range', from:['loan'], plain:'Wants $600–700k', raw:'"loan_band": "600k-700k"'},
+  occ:{k:'Use of home', v:'Primary', n:'as entered', from:[], plain:'For a primary home', raw:'"occupancy": "primary"'},
+  assets:{k:'Assets', v:'$200–250k', n:'optional, you chose to share', from:['assets'], plain:'Assets in the $200–250k range', raw:'"assets_band": "200k-250k"'},
+};
+const ICONS = {
+  device:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>',
+  clock:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  shield:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 3l8 3v6c0 4.5-3.4 7.8-8 9-4.6-1.2-8-4.5-8-9V6l8-3z"/></svg>',
+  arrow:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M4 12h16M14 6l6 6-6 6"/></svg>',
+  block:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"><circle cx="12" cy="12" r="9"/><path d="M6 6l12 12"/></svg>',
+  lock:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2F3E56" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>',
+  grip:'<svg width="16" height="16" viewBox="0 0 24 24" fill="#9AA5B5"><circle cx="9" cy="6" r="1.8"/><circle cx="15" cy="6" r="1.8"/><circle cx="9" cy="12" r="1.8"/><circle cx="15" cy="12" r="1.8"/><circle cx="9" cy="18" r="1.8"/><circle cx="15" cy="18" r="1.8"/></svg>',
+  check:'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l4 4L19 7"/></svg>',
+  x:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2F3E56" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+};
+
+/* Timeline of the run. Each step can mutate agents / bands / counts. */
+const TIMELINE = [
+  {t:'0:00', at:0, agent:'device', kind:'local', title:'Your device turned 9 exact values into 5 ranges', d:'Exact income $142,000 became "debt vs. income 30–35%". Nothing else left.',
+    do:s=>{ ['fico','ltv','dti','loan','occ'].forEach(b=>s.shared.add(b)); set('device','done','Done','Turned 9 exact values into 5 ranges'); set('coord','work','Working','Sending ranges to the bureau'); },
+    detail:'income'},
+  {t:'0:07', at:1400, agent:'bureau', kind:'shared', title:'Credit bureau confirmed your score band and signed it', d:'Sent to banks: "740–759" plus a signature. Your exact score stayed at the bureau.',
+    do:s=>{ set('bureau','done','Done','Signed "740–759" · kept your exact score'); }, detail:'bureau'},
+  {t:'0:12', at:2600, agent:'coord', kind:'shared', title:'Coordinator sent the same 5 ranges to all 4 banks', d:'Banks cannot see each other or your name. Each gets a one-time code, not an ID.',
+    do:s=>{ set('coord','work','Working','Waiting for sealed quotes'); ['A','B','C','D'].forEach(b=>set(b,'work','Pricing','Received 5 ranges · pricing from its own rate sheet')); s.round='Round 1 of 2'; }, detail:'coord'},
+  {t:'0:41', at:4400, agent:'A', kind:'sealed', title:'Cardinal Bank returned a sealed quote', d:'Only the coordinator can open it. Other banks never see it.', do:()=>set('A','done','Quoted','Sealed quote received · 0:41'), detail:'quoteA'},
+  {t:'0:52', at:5600, agent:'B', kind:'sealed', title:'Bayline Credit Union returned a sealed quote', d:'', do:()=>set('B','done','Quoted','Sealed quote received · 0:52'), detail:'quoteB'},
+  {t:'0:58', at:6800, agent:'D', kind:'blocked', title:'Summit Lending asked for your exact income and assets. Blocked.', d:'The guard refused automatically. Summit must quote on ranges or drop out.',
+    do:s=>{ s.blocked++; set('D','warn','Re-quoting','Asked for your exact income. Blocked.', true); markRequested('assets'); }, detail:'guard'},
+  {t:'1:04', at:8000, agent:'C', kind:'sealed', title:'Redwood Mortgage returned a sealed quote', d:'', do:()=>set('C','done','Quoted','Sealed quote received · 1:04'), detail:'quoteC'},
+  {t:'1:19', at:9600, agent:'D', kind:'sealed', title:'Summit Lending re-quoted on ranges only', d:'Its request for exact data stays in your ledger.', do:()=>set('D','done','Quoted','Re-quoted on ranges · request logged', true), detail:'quoteD'},
+  {t:'1:22', at:10600, agent:'coord', kind:'shared', title:'Round 2: each bank was told one number, the best competing total cost', d:'Not who offered it. Not your data. Just "$X to beat".',
+    do:s=>{ s.round='Round 2 of 2'; ['A','B','C','D'].forEach(b=>set(b,'work','Deciding','Told the best competing cost · deciding whether to improve', b==='D')); }, detail:'round2'},
+  {t:'1:37', at:12200, agent:'C', kind:'sealed', title:'Redwood Mortgage improved its offer by $3,140', d:'Its own floor is enforced in code. It cannot go below it.', do:()=>set('C','done','Improved','Improved by $3,140 in round 2'), detail:'quoteC2'},
+  {t:'1:41', at:13200, agent:'A', kind:'sealed', title:'Cardinal Bank declined to improve. It is at its floor.', d:'', do:()=>{set('A','done','Held','Declined · at its floor'); set('B','done','Held','No change'); set('D','done','Held','No change', true);}, detail:'quoteA2'},
+  {t:'1:48', at:14400, agent:'coord', kind:'local', title:'Run complete. Ranked by 7-year total cost.', d:'Best offer: Redwood Mortgage. Open Quotes & ledger to see everything.',
+    do:s=>{ set('coord','done','Done','Ranked 4 quotes · ledger written'); s.done=true; }, detail:'final'},
+];
+
+/* ---------- State ---------- */
+let S;
+function reset(){
+  S={shared:new Set(), blocked:0, stepsShown:0, round:'Not started', done:false, agents:{}, requested:new Set(), timers:[], running:false, selectedStep:null, selectedAgent:null, userShared:new Set()};
+  AGENTS.forEach(a=>S.agents[a.id]={tag:a.tag, st:a.st, flag:false});
+  document.getElementById('statusText').textContent='Ready to run';
+  document.querySelector('#statusPill .dot').classList.remove('live');
+  document.getElementById('runBtn').textContent='Start run';
+  document.getElementById('runBtn').disabled=false;
+  closeDrawer();
+  render();
+}
+function set(id,cls,label,st,flag){ S.agents[id]={tag:[cls,label], st, flag:!!flag}; }
+function markRequested(id){ S.requested.add(id); }
+
+/* ---------- Render ---------- */
+const $=s=>document.querySelector(s);
+function render(){ renderAgents(); renderBands(); renderSteps(); renderVault(); renderCounts(); renderLedger(); }
+
+function renderAgents(){
+  const el=$('#agentList'); el.innerHTML='';
+  let g='';
+  AGENTS.forEach(a=>{
+    if(a.group!==g){ g=a.group; const l=document.createElement('div'); l.className='section-label'; l.textContent=g; el.appendChild(l); }
+    const st=S.agents[a.id];
+    const b=document.createElement('button');
+    b.className='agent'+(st.flag?' flag':'')+(S.selectedAgent===a.id?' selected':'');
+    b.innerHTML=`<span class="ic" style="background:${a.letter?(st.flag?'#F6E3B8':'#EEF1F6'):a.color};color:${st.flag?'#6B4300':'#2F3E56'}">${a.letter||ICONS[a.ic]}</span>
+      <span class="txt"><span class="name">${a.name}</span><span class="st">${st.st}</span></span>
+      <span class="tag ${st.tag[0]}">${st.tag[1]}</span>`;
+    b.onclick=()=>{ S.selectedAgent=a.id; renderAgents(); openAgent(a); };
+    el.appendChild(b);
+  });
+}
+
+function renderBands(){
+  const el=$('#bands'); el.innerHTML='';
+  const order=['fico','ltv','dti','loan','occ','assets'];
+  order.forEach(id=>{ if(!S.shared.has(id)) return; const b=BANDS[id];
+    const btn=document.createElement('button'); btn.className='band';
+    btn.innerHTML=`<span class="k">${b.k}</span><span class="v">${b.v}</span><span class="n ${b.ok?'ok':''}">${b.ok?ICONS.check:''}${b.n}</span>`;
+    btn.onclick=()=>openBand(id);
+    el.appendChild(btn);
+  });
+  const slots=Math.max(0,5-el.children.length);
+  for(let i=0;i<slots;i++){ const d=document.createElement('div'); d.className='band empty'; d.textContent=S.stepsShown?'Drop a value here to share it as a range':'Ranges appear here when the run starts'; el.appendChild(d); }
+  if(!slots && S.shared.size>=5 && !S.shared.has('assets')){ const d=document.createElement('div'); d.className='band empty'; d.textContent='Drop a value here to share it as a range'; el.appendChild(d); }
+  el.querySelectorAll('.band.empty').forEach(z=>{
+    z.ondragover=e=>{e.preventDefault(); z.classList.add('over');};
+    z.ondragleave=()=>z.classList.remove('over');
+    z.ondrop=e=>{e.preventDefault(); z.classList.remove('over'); onDrop(e.dataTransfer.getData('text/plain'));};
+  });
+  el.ondragover=e=>e.preventDefault();
+  el.ondrop=e=>{e.preventDefault(); onDrop(e.dataTransfer.getData('text/plain'));};
+}
+
+function renderSteps(){
+  const el=$('#steps'); el.innerHTML='';
+  TIMELINE.slice(0,S.stepsShown).forEach((s,i)=>{
+    const a=AGENTS.find(x=>x.id===s.agent);
+    const b=document.createElement('button'); b.className='step '+(s.kind==='blocked'?'blocked':'')+(S.selectedStep===i?' selected':'');
+    const ic = s.kind==='blocked' ? `<span class="ic" style="background:#D9A441">${ICONS.block}</span>`
+      : a.letter ? `<span class="ic" style="background:#EEF1F6;color:#2F3E56">${a.letter}</span>`
+      : `<span class="ic" style="background:${a.color}">${ICONS[a.id==='coord'?'arrow':a.ic]}</span>`;
+    const tagTxt={local:'Stayed local',shared:'Range shared',sealed:'Sealed',blocked:'Blocked'}[s.kind];
+    b.innerHTML=`<span class="t">${s.t}</span>${ic}<span class="body"><span class="title">${s.title}</span>${s.d?`<span class="d">${s.d}</span>`:''}</span><span class="tag ${s.kind}">${tagTxt}</span>`;
+    b.onclick=()=>{ S.selectedStep=i; renderSteps(); openStep(s,i); };
+    el.appendChild(b);
+  });
+  if(S.running && !S.done){
+    const nxt=TIMELINE[S.stepsShown];
+    const w=document.createElement('div'); w.className='waiting';
+    w.innerHTML=`<span class="t">now</span><span class="ic"></span><span>${waitText()}</span>`;
+    el.appendChild(w);
+  }
+  if(!S.stepsShown && !S.running){
+    const w=document.createElement('div'); w.className='waiting'; w.innerHTML=`<span class="t">—</span><span class="ic"></span><span>Press <b>Start run</b> to watch every step appear here.</span>`; el.appendChild(w);
+  }
+  $('#roundLabel').textContent=S.round;
+}
+function waitText(){
+  const n=S.stepsShown;
+  if(n<=2) return 'Ranges are on their way to the banks…';
+  if(n<=7) return 'Waiting for the remaining sealed quotes…';
+  if(n<=10) return 'Banks are deciding whether to improve…';
+  return 'Ranking offers…';
+}
+
+function renderVault(){
+  const el=$('#vault'); el.innerHTML='';
+  const l1=document.createElement('div'); l1.className='section-label'; l1.textContent='Used to make ranges'; el.appendChild(l1);
+  VAULT.filter(v=>!v.never).forEach(v=>el.appendChild(vaultItem(v)));
+  const l2=document.createElement('div'); l2.className='section-label'; l2.textContent='Never used, never sent'; el.appendChild(l2);
+  VAULT.filter(v=>v.never).forEach(v=>el.appendChild(vaultItem(v)));
+}
+function vaultItem(v){
+  const d=document.createElement('div');
+  const bandShared = v.band && S.shared.has(v.band);
+  const requested = S.requested.has(v.id) && !bandShared;
+  d.className='item'+(v.canDrag && !bandShared?' drag':'')+(v.never||v.optional&&!bandShared?' hidden':'');
+  let tag;
+  if(bandShared) tag=`<span class="tag shared">→ ${BANDS[v.band].v}</span>`;
+  else if(requested) tag=`<span class="tag warn">Requested · blocked</span>`;
+  else if(v.optional) tag=`<span class="tag local">Hidden · drag to share</span>`;
+  else if(v.never) tag=`<span class="tag local">Hidden</span>`;
+  else tag=`<span class="tag local">Ready</span>`;
+  d.innerHTML=`<span class="grip">${v.canDrag&&!bandShared?ICONS.grip:''}</span><span><div class="k">${v.k}</div><div class="v ${v.txt?'txt':''}">${v.v}</div></span>${tag}${ICONS.lock}`;
+  if(v.canDrag && !bandShared){
+    d.draggable=true;
+    d.ondragstart=e=>{ e.dataTransfer.setData('text/plain',v.id); d.classList.add('dragging'); };
+    d.ondragend=()=>d.classList.remove('dragging');
+    d.title='Drag into the middle to share as a range';
+  } else if(v.never){ d.title='This is never sent, in any form.'; }
+  return d;
+}
+function onDrop(id){
+  const v=VAULT.find(x=>x.id===id); if(!v) return;
+  if(v.never){ toast('That value is never sent, in any form.'); return; }
+  const b=BANDS[v.band];
+  if(S.shared.has(v.band)){ toast(`Already shared as "${b.v}". The exact value stayed here.`); return; }
+  openConfirmShare(v,b);
+}
+function renderCounts(){
+  $('#cShared').textContent=S.shared.size;
+  $('#cLocal').textContent=9;
+  $('#cBlocked').textContent=S.blocked;
+}
+
+/* ---------- Run ---------- */
+function start(){
+  if(S.running) return;
+  S.running=true; S.stepsShown=0;
+  $('#runBtn').textContent='Running…'; $('#runBtn').disabled=true;
+  $('#statusText').textContent='Round 1 of 2 · collecting sealed quotes'; $('#statusPill .dot').classList.add('live');
+  TIMELINE.forEach((s,i)=>{
+    S.timers.push(setTimeout(()=>{
+      s.do(S); S.stepsShown=i+1;
+      if(i>=8) $('#statusText').textContent='Round 2 of 2 · banks deciding';
+      if(S.done){ $('#statusText').textContent='Run complete · 1:48'; $('#statusPill .dot').classList.remove('live'); $('#runBtn').textContent='Run again'; $('#runBtn').disabled=false; S.running=false; }
+      render();
+    }, s.at));
+  });
+}
+$('#runBtn').onclick=()=>{ if(S.done){ S.timers.forEach(clearTimeout); reset(); } start(); };
+$('#resetBtn').onclick=()=>{ S.timers.forEach(clearTimeout); reset(); };
+
+/* ---------- Views ---------- */
+document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',e=>{ e.preventDefault(); showView(b.dataset.view); }));
+function showView(v){
+  document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.id==='view-'+v));
+  document.querySelectorAll('nav.tabs button').forEach(x=>x.classList.toggle('active',x.dataset.view===v));
+  renderLedger();
+}
+
+/* ---------- Drawer ---------- */
+const drawer=$('#drawer'), scrim=$('#scrim');
+function openDrawer(html){ drawer.innerHTML=html; drawer.classList.add('open'); scrim.classList.add('open'); drawer.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeDrawer); }
+function closeDrawer(){ drawer.classList.remove('open'); scrim.classList.remove('open'); S.selectedStep=null; S.selectedAgent=null; renderSteps(); renderAgents(); }
+scrim.onclick=closeDrawer;
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeDrawer(); });
+const head=(kicker,title,amber,icon,bg)=>`<div class="dh ${amber?'amber':''}"><span class="ic" style="background:${bg}">${icon}</span><div style="flex:1"><div class="kicker">${kicker}</div><h2>${title}</h2></div><button class="x" data-close aria-label="Close">${ICONS.x}</button></div>`;
+const foot=(l,r)=>`<div class="df">${l?`<button class="btn" data-close>${l}</button>`:''}<span class="spacer"></span><button class="btn primary" data-close>${r||'Close'}</button></div>`;
+const msgFull=()=>{ const parts=[...S.shared].map(b=>BANDS[b].plain); return `"Applicant <span style="font-family:var(--mono);background:#EEF1F6;padding:1px 6px;border-radius:4px">code 7f3a</span>: ${parts.join('. ')}."`; };
+const rawFull=()=>`{ "token": "7f3a…",\n  ${[...S.shared].map(b=>BANDS[b].raw).join(',\n  ')} }`;
+const checks=`<ul class="checks">
+<li>${ICONS.check.replace('currentColor','#1F6B45')}<span>Only allowed fields are present. Anything else is refused by code, not by a model.</span></li>
+<li>${ICONS.check.replace('currentColor','#1F6B45')}<span>No name, email, address, employer or ID number anywhere in the message.</span></li>
+<li>${ICONS.check.replace('currentColor','#1F6B45')}<span>The code is one-time. Banks cannot link this request to any past or future one.</span></li></ul>`;
+
+function openStep(s,i){
+  const k=s.detail;
+  if(k==='income') return openDrawer(head(`Step ${i+1} · ${s.t} · Your device`,'How your income became a range',false,ICONS.arrow.replace('14','20').replace('14','20'),'#1E4B86')+
+    `<div class="db"><div class="ba"><div class="box local"><span class="lbl">${ICONS.lock}Stayed on your device</span><span class="big">$142,000</span><span class="sub">Annual income, as you typed it</span><span class="big" style="margin-top:6px">$3,850 / mo</span><span class="sub">Monthly debt payments</span></div>
+    <div class="arrow"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1E4B86" stroke-width="2.2"><path d="M4 12h16M14 6l6 6-6 6"/></svg></div>
+    <div class="box shared"><span class="lbl">Sent to the 4 banks</span><span class="big">Debt vs. income: 30–35%</span><span class="sub">One range, computed here. A bank can price from it but cannot recover either number.</span></div></div>
+    <div><h3>The exact message that left your device</h3><div class="quote" style="margin-top:8px">${msgFull()}</div><div class="code" style="margin-top:8px">${rawFull()}</div></div>
+    <div><h3>Checks that ran before sending</h3><div style="margin-top:8px">${checks}</div></div></div>`+foot('Copy raw message','Next step'));
+  if(k==='bureau') return openDrawer(head(`Step ${i+1} · ${s.t} · Credit bureau`,'The bureau vouched for a range, not a number',false,ICONS.shield,'#2F3E56')+
+    `<div class="db"><div class="ba"><div class="box local"><span class="lbl">${ICONS.lock}Stayed at the bureau</span><span class="big">752</span><span class="sub">Your exact credit score</span></div><div class="arrow"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1E4B86" stroke-width="2.2"><path d="M4 12h16M14 6l6 6-6 6"/></svg></div><div class="box shared"><span class="lbl">Sent to the banks</span><span class="big">740–759</span><span class="sub">Plus a signature banks can check, so they know the range is real without seeing the score.</span></div></div>
+    <div><h3>What the bureau received</h3><div class="quote" style="margin-top:8px">A one-time code only. It did not learn the loan amount, the home, or which banks are bidding.</div></div>
+    <div><h3>Transcript</h3><div class="transcript" style="margin-top:8px"><div class="msg out"><span class="who">Coordinator → Bureau</span>Please attest the credit range for code 7f3a.</div><div class="msg in"><span class="who">Bureau → Coordinator</span>{"fico_band":"740-759","sig":"a91c…"}</div></div></div></div>`+foot('','Next step'));
+  if(k==='coord') return openDrawer(head(`Step ${i+1} · ${s.t} · Coordinator`,'The same message went to all four banks',false,ICONS.arrow,'#2F3E56')+
+    `<div class="db"><div class="quote">${msgFull()}</div><div class="code">${rawFull()}</div><div class="note">${ICONS.lock}<span>Each bank got the same ranges. None of them knows who else received it or what anyone else will bid.</span></div><div><h3>Checks that ran before sending</h3><div style="margin-top:8px">${checks}</div></div></div>`+foot('','Next step'));
+  if(k.startsWith('quote')){
+    const map={A:['Cardinal Bank','6.250%','0.00','$299,880'],B:['Bayline Credit Union','6.375%','0.25','$302,270'],C:['Redwood Mortgage','6.375%','0.50','$300,550'],D:['Summit Lending','5.990%','1.75','$304,950']};
+    const id=k[5]; const q=map[id]; const r2=k.endsWith('2');
+    if(id==='C'&&r2) q[1]='6.125%', q[3]='$297,410';
+    return openDrawer(head(`Step ${i+1} · ${s.t} · ${q[0]}`, r2?(id==='C'?'Redwood improved its sealed offer':'Cardinal held at its floor'):'A sealed quote arrived',false,`<span style="color:#fff;font-weight:600">${id}</span>`,'#2F3E56')+
+    `<div class="db"><div class="kpis" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div class="kpi"><span class="k">Rate</span><span class="v">${q[1]}</span></div><div class="kpi"><span class="k">Points</span><span class="v">${q[2]}</span></div><div class="kpi"><span class="k">7-year total</span><span class="v">${q[3]}</span></div></div>
+    <div class="note">${ICONS.lock}<span>Sealed means only the coordinator opened it. The other three banks never see this number, and ${q[0]} never sees theirs.</span></div>
+    <div><h3>What ${q[0]} knows about you</h3><div class="quote" style="margin-top:8px">The ${S.shared.size} ranges${r2?', plus one number in round 2: "the best competing total cost is $X".':'.'} Nothing else.</div></div>
+    ${r2&&id==='A'?'<div class="quote">"We are at our floor and cannot improve." The floor is a number in the bank\'s own rate sheet. Code enforces it. The bank\'s model only writes the sentence.</div>':''}</div>`+foot('','Close'));
+  }
+  if(k==='guard') return openDrawer(head(`Step ${i+1} · ${s.t} · Summit Lending (Bank D)`,'A bank asked for more than it is allowed. We said no.',true,ICONS.block.replace('14','20').replace('14','20'),'#D9A441')+
+    `<div class="db"><div><h3>What Summit Lending asked for</h3><div class="quote" style="margin-top:8px;display:flex;flex-direction:column;gap:10px"><p style="margin:0">"To finalize pricing we need the applicant's exact annual income and a statement of liquid assets."</p><div class="chips"><span class="chip">exact_income</span><span class="chip">assets</span></div></div></div>
+    <div><h3>What happened, automatically</h3><ol class="numbered" style="margin-top:8px"><li><span class="n">1</span><span><b>The guard refused the request.</b> Both fields are outside the allowed list. This is a rule in code. No model was asked whether to share.</span></li><li><span class="n">2</span><span><b>Nothing left your device.</b> Your income and assets are still only here. The right-hand panel shows both still locked.</span></li><li><span class="n">3</span><span><b>Summit was told to quote on ranges or withdraw.</b> The refusal is written into your disclosure ledger.</span></li></ol></div>
+    <div class="note">${ICONS.lock}<span>You can still choose to share a <b>range</b> for assets by dragging it from the right. You will see the range first. Exact values can never be dragged.</span></div></div>`+foot('Remove Summit from this run','Keep going'));
+  if(k==='round2') return openDrawer(head(`Step ${i+1} · ${s.t} · Coordinator`,'Round 2: one number, nothing else',false,ICONS.arrow,'#2F3E56')+
+    `<div class="db"><div class="quote">To each bank: "The best competing 7-year total cost is <b>$299,880</b>. You may improve your sealed offer once, or hold."</div><div class="note">${ICONS.lock}<span>Banks do not learn who offered it, and nothing new about you. Their floors stay private and are enforced in code.</span></div></div>`+foot('','Next step'));
+  if(k==='final') return openDrawer(head(`Step ${i+1} · ${s.t} · Coordinator`,'Run complete',false,ICONS.check.replace('currentColor','#fff').replace('11','20').replace('11','20'),'#1F6B45')+
+    `<div class="db"><div class="quote">Best 7-year total cost: <b>Redwood Mortgage, $297,410</b>. You saved about <b>$4,860</b> against the first quote you received. Summit's low headline rate is flagged: its points and fees make it the most expensive.</div><div class="note">${ICONS.lock}<span>Everything the banks learned, and never learned, is in your disclosure ledger.</span></div></div>`+
+    `<div class="df"><span class="spacer"></span><button class="btn primary" id="goLedger">Open Quotes &amp; ledger</button></div>`).then?.() || setTimeout(()=>{ const b=$('#goLedger'); if(b) b.onclick=()=>{closeDrawer(); showView('ledger');}; },0);
+}
+function openBand(id){
+  const b=BANDS[id];
+  const from=b.from.map(f=>VAULT.find(v=>v.id===f)).filter(Boolean);
+  openDrawer(head('Shared range',`${b.k}: ${b.v}`,false,ICONS.arrow.replace('14','20').replace('14','20'),'#1E4B86')+
+    `<div class="db"><div class="ba"><div class="box local"><span class="lbl">${ICONS.lock}Stayed on your device</span>${from.length?from.map(f=>`<span class="big">${f.v}</span><span class="sub">${f.k}</span>`).join(''):'<span class="sub">Entered as a category, no exact value involved.</span>'}</div><div class="arrow"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1E4B86" stroke-width="2.2"><path d="M4 12h16M14 6l6 6-6 6"/></svg></div><div class="box shared"><span class="lbl">Sent to the 4 banks</span><span class="big">${b.v}</span><span class="sub">${b.n}</span></div></div>
+    <div><h3>Raw form</h3><div class="code" style="margin-top:8px">${b.raw}</div></div></div>`+foot('','Close'));
+}
+function openAgent(a){
+  const st=S.agents[a.id];
+  const isBank=!!a.letter;
+  const learned = isBank ? `${S.shared.size} ranges, a signed credit range${S.stepsShown>8?', and in round 2 one number: the best competing total cost':''}.` : a.id==='bureau' ? 'A one-time code. Nothing else.' : a.id==='coord' ? 'The ranges and the sealed quotes.' : 'Everything. It is your device.';
+  const never = isBank ? 'Your name, exact income, assets, exact score, SSN, employer, address, and what any other bank bid.' : a.id==='bureau' ? 'Loan details, home price, which banks are bidding.' : a.id==='coord' ? 'Any exact value of yours. Any bank\'s rate sheet, margin or floor.' : 'Nothing is hidden from your own device.';
+  const tr = transcriptFor(a.id);
+  openDrawer(head(a.group, a.name, st.flag, a.letter?`<span style="color:${st.flag?'#6B4300':'#fff'};font-weight:600">${a.letter}</span>`:ICONS[a.ic], a.letter?(st.flag?'#F6E3B8':'#2F3E56'):a.color)+
+    `<div class="db"><div class="ba" style="grid-template-columns:1fr 1fr"><div class="box shared"><span class="lbl">Learned</span><span class="sub" style="color:var(--slate)">${learned}</span></div><div class="box local"><span class="lbl">${ICONS.lock}Never learned</span><span class="sub" style="color:var(--slate)">${never}</span></div></div>
+    <div><h3>Every message, word for word</h3><div class="transcript" style="margin-top:8px">${tr||'<div class="sub">Nothing yet. Start the run.</div>'}</div></div></div>`+foot('','Close'));
+}
+function transcriptFor(id){
+  const n=S.stepsShown; const out=[];
+  const m=(cls,who,txt)=>out.push(`<div class="msg ${cls}"><span class="who">${who}</span>${txt}</div>`);
+  if(id==='device'&&n>=1){ m('out','Your device → Coordinator', msgFull()); }
+  if(id==='bureau'&&n>=2){ m('in','Coordinator → Bureau','Attest credit range for code 7f3a.'); m('out','Bureau → Coordinator','{"fico_band":"740-759","sig":"a91c…"}'); }
+  if(id==='coord'){ if(n>=1) m('in','Your device → Coordinator', msgFull()); if(n>=3) m('out','Coordinator → Banks A, B, C, D', msgFull()); if(n>=9) m('out','Coordinator → Banks','Best competing 7-year total cost is $299,880. Improve once or hold.'); if(n>=12) m('in','Coordinator → You','Best offer: Redwood Mortgage, $297,410 over 7 years.'); }
+  if(['A','B','C','D'].includes(id)){
+    if(n>=3) m('in','Coordinator → Bank '+id, msgFull());
+    if(id==='A'&&n>=4) m('out','Cardinal → Coordinator','Sealed: 6.250%, 0 points, $299,880 over 7 years.');
+    if(id==='B'&&n>=5) m('out','Bayline → Coordinator','Sealed: 6.375%, 0.25 points, $302,270 over 7 years.');
+    if(id==='D'&&n>=6){ m('blocked','Summit → Coordinator','Request: exact_income, assets. "To finalize pricing we need the applicant\'s exact annual income and a statement of liquid assets."'); m('out','Guard → Summit','BLOCKED. Fields not allowed. Quote on ranges or withdraw.'); }
+    if(id==='C'&&n>=7) m('out','Redwood → Coordinator','Sealed: 6.375%, 0.50 points, $300,550 over 7 years.');
+    if(id==='D'&&n>=8) m('out','Summit → Coordinator','Sealed: 5.990%, 1.75 points, $304,950 over 7 years.');
+    if(n>=9) m('in','Coordinator → Bank '+id,'Best competing 7-year total cost is $299,880. Improve once or hold.');
+    if(id==='C'&&n>=10) m('out','Redwood → Coordinator','Improved: 6.125%, 0.50 points, $297,410.');
+    if(id==='A'&&n>=11) m('out','Cardinal → Coordinator','We are at our floor and cannot improve.');
+    if((id==='B'||id==='D')&&n>=11) m('out',(id==='B'?'Bayline':'Summit')+' → Coordinator','Holding our offer.');
+  }
+  return out.join('');
+}
+function openConfirmShare(v,b){
+  openDrawer(head('Before anything is sent',`Share ${v.k.toLowerCase()} as a range?`,false,ICONS.arrow.replace('14','20').replace('14','20'),'#1E4B86')+
+    `<div class="db"><div class="ba"><div class="box local"><span class="lbl">${ICONS.lock}Stays on your device</span><span class="big">${v.v}</span><span class="sub">${v.k}</span></div><div class="arrow"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1E4B86" stroke-width="2.2"><path d="M4 12h16M14 6l6 6-6 6"/></svg></div><div class="box shared"><span class="lbl">Would be sent to the 4 banks</span><span class="big">${b.v}</span><span class="sub">${b.k}</span></div></div>
+    <div class="note">${ICONS.lock}<span>Banks get the range only. They cannot recover the exact value from it, and this stays in your ledger as something you chose to share.</span></div></div>
+    <div class="df"><button class="btn" data-close>Keep it hidden</button><span class="spacer"></span><button class="btn primary" id="confirmShare">Share the range</button></div>`);
+  setTimeout(()=>{ $('#confirmShare').onclick=()=>{ S.shared.add(v.band); S.userShared.add(v.band); S.requested.delete(v.id); closeDrawer(); render(); toast(`Shared "${b.v}" with 4 banks. The exact value stayed here.`); }; },0);
+}
+
+/* ---------- Ledger view ---------- */
+function renderLedger(){
+  const done=S.done;
+  $('#kpis').innerHTML = done ? `
+    <div class="kpi blue"><span class="k">Winner</span><span class="v">Redwood Mortgage</span><span class="n">improved in round 2</span></div>
+    <div class="kpi"><span class="k">Rate</span><span class="v">6.125%</span><span class="n">0.5 points · 30-yr fixed</span></div>
+    <div class="kpi"><span class="k">7-year total cost</span><span class="v">$297,410</span><span class="n">interest + points + fees</span></div>
+    <div class="kpi green"><span class="k">Saved vs. first quote</span><span class="v">$4,860</span><span class="n">from 2 sealed rounds</span></div>`
+    : `<div class="kpi" style="grid-column:1/-1"><span class="k">No result yet</span><span class="n">Go to Live run and press Start run. Quotes appear here when the run finishes.</span></div>`;
+  const rows = done ? [
+    ['1','Redwood Mortgage','6.125%','0.50','$297,410','<span class="g">Improved by $3,140</span>','win1'],
+    ['2','Cardinal Bank','6.250%','0.00','$299,880','<span class="mu">Declined, at its floor</span>',''],
+    ['3','Bayline Credit Union','6.375%','0.25','$302,270','<span class="mu">No change</span>',''],
+    ['4','Summit Lending','5.990%','1.75','$304,950','<span class="am">Low rate, high fees. Flagged.</span>','flag'],
+  ] : [];
+  $('#quotes').innerHTML = rows.map(r=>`<button class="qt ${r[6]}"><span style="font-weight:600;color:${r[6]==='flag'?'var(--amber)':r[6]?'var(--blue)':'var(--muted)'}">${r[0]}</span><span style="font-weight:${r[6]==='win1'?600:500}">${r[1]}</span><span class="m">${r[2]}</span><span class="m hide">${r[3]}</span><span class="m">${r[4]}</span><span class="hide">${r[5]}</span></button>`).join('') || '<div class="sub" style="padding:14px">Quotes will be listed here.</div>';
+  const sharedTxt = S.shared.size ? `${S.shared.size} ranges${S.shared.has('fico')?' · a signed credit range':''}${S.stepsShown>8?' · in round 2, one number: the best competing total cost':''}${S.userShared.size?' · '+[...S.userShared].map(b=>BANDS[b].k.toLowerCase()+' range, which you chose to share').join(', '):''}` : 'Nothing yet';
+  $('#ledgerList').innerHTML=`
+    <div class="lg"><div class="lh">Each bank (4)</div><div class="two"><div><span class="lbl b">Learned</span>${sharedTxt}</div><div><span class="lbl s">${ICONS.lock}Never learned</span>Your name · exact income · ${S.shared.has('assets')?'exact ':''}assets · exact score · SSN · employer · address · which other banks bid, or what they bid</div></div></div>
+    <div class="lg"><div class="lh">Credit bureau</div><div class="two"><div><span class="lbl b">Learned</span>${S.stepsShown>=2?'A one-time code, nothing else':'Nothing yet'}</div><div><span class="lbl s">${ICONS.lock}Never learned</span>Loan details · home price · which banks are bidding</div></div></div>
+    <div class="lg"><div class="lh">Coordinator</div><div class="two"><div><span class="lbl b">Learned</span>${S.stepsShown?'The ranges · the sealed quotes':'Nothing yet'}</div><div><span class="lbl s">${ICONS.lock}Never learned</span>Any exact value of yours · any bank's rate sheet, margin or floor</div></div></div>
+    <div class="lg amber"><div class="lh">${ICONS.block.replace('#fff','#6B4300')}Blocked requests (${S.blocked})</div><div class="one">${S.blocked?'0:58 · Summit Lending asked for <b>exact income</b> and <b>assets</b>. Refused by the guard. Nothing sent.':'None so far.'}</div></div>`;
+}
+$('#exportBtn').onclick=()=>toast('In the real app this downloads a signed PDF of the ledger.');
+$('#acceptBtn').onclick=()=>toast(S.done?'In the real app this starts the paperwork with Redwood Mortgage.':'Run the negotiation first.');
+
+/* ---------- Toast ---------- */
+let tt; function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(tt); tt=setTimeout(()=>t.classList.remove('show'),2600); }
+
+reset();
+</script>
+</body>
+</html>
