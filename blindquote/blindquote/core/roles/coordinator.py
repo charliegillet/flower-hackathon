@@ -46,6 +46,21 @@ class BankState:
     flags: list[str] = field(default_factory=list)
 
 
+class _BankTagging:
+    """Adds ``bank_id`` to every event that names a bank, so UIs can key on a stable id."""
+
+    def __init__(self, ev: Emitter, ids: dict[str, str]) -> None:
+        self._ev, self._ids = ev, ids
+
+    def emit(self, type_: str, **fields: Any) -> None:
+        if "bank" in fields and fields["bank"] in self._ids:
+            fields.setdefault("bank_id", self._ids[fields["bank"]])
+        self._ev.emit(type_, **fields)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._ev, name)
+
+
 class Coordinator:
     def __init__(
         self,
@@ -58,7 +73,8 @@ class Coordinator:
         budget_s: float = RUN_BUDGET_S,
     ) -> None:
         self.grid = grid
-        self.ev = emitter
+        self.bank_ids: dict[str, str] = {}
+        self.ev = _BankTagging(emitter, self.bank_ids)
         self.llm = llm
         self.fetch = fetch
         self.t = timeouts or Timeouts()
@@ -162,8 +178,11 @@ class Coordinator:
                 "org_kind": msg.get("org_kind"),
                 "model": msg.get("model"),
                 "location": msg.get("location") or meta[nid].get("location"),
+                "bank_id": msg.get("bank_id"),
             }
             self.nodes[nid] = info
+            if info["role"] == "bank" and info["bank_id"]:
+                self.bank_ids[str(info["name"])] = str(info["bank_id"])
             ev.msg(nid, COORD, "hello_reply", f"{info['name']} ({info['role']})", ["role", "name", "org_kind", "model"])
             ev.emit("bq.node", node_id=nid, **info)
             self.ledger.party(info["name"], str(info["role"]))
@@ -413,7 +432,7 @@ class Coordinator:
         if not finals:
             raise RuntimeError("No bank returned a valid quote")
         ranking = sorted(
-            ({"bank": s.name, "model": s.model, "flags": list(s.flags),
+            ({"bank": s.name, "bank_id": self.bank_ids.get(s.name), "model": s.model, "flags": list(s.flags),
               **{k: s.final[k] for k in ("rate", "points", "fees", "apr", "total_cost", "monthly_pi")}}
              for s in finals),
             key=lambda r: (bool(r["flags"]), r["total_cost"]),

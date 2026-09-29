@@ -16,7 +16,8 @@ The narrative text also streams as standard Responses events:
 |---|---|
 | `node_id` | Flower SuperNode id (string) or `"coordinator"` |
 | `role` | `coordinator` · `borrower` · `bureau` · `bank` |
-| `bank` | Bank display name, e.g. `"Cardinal Bank"` |
+| `bank` | Bank display name, e.g. `"Chase"` |
+| `bank_id` | Stable bank key from the node's `--node-config bank_id=...` (e.g. `chase`), added to every event that names a bank and to `bq.node` / `bq.verdict.ranking[]` |
 | `round` | `1` or `2` |
 
 ## Events

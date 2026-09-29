@@ -28,6 +28,7 @@ def hello_reply(cfg: dict[str, Any]) -> dict[str, Any]:
         "org_kind": cfg.get("org_kind"),
         "model": cfg.get("model") or None,
         "location": cfg.get("location") or None,
+        "bank_id": cfg.get("bank_id") or None,
     }
 
 
