@@ -68,6 +68,8 @@ class Coordinator:
         self.ledger = Ledger()
         self.nodes: dict[str, dict[str, Any]] = {}
         self.bureau_name = "Credit Bureau"
+        # The borrower's stay horizon: used here to rank offers, never sent to a bank.
+        self.horizon = 7
 
     # ------------------------------------------------------------------ grid
     def _exchange(self, sends: list[tuple[str, dict[str, Any]]], timeout: float, on_reply: Callable[[str, dict[str, Any]], None]) -> list[str]:
@@ -190,8 +192,7 @@ class Coordinator:
         if not out:
             raise RuntimeError("Borrower node did not reply in time")
         bands = dict(out["bands"])
-        if horizon_hint:
-            bands["horizon_years"] = horizon_hint
+        self.horizon = int(horizon_hint or out.get("horizon_years") or 7)
         shown = {k: bands[k] for k in ("loan_band", "ltv_band", "dti_band", "occupancy", "term_years", "property_state")}
         ev.msg(borrower, COORD, "bands", f"Loan {bands['loan_band']}, LTV {bands['ltv_band']}, DTI {bands['dti_band']}",
                list(shown))
@@ -233,10 +234,9 @@ class Coordinator:
         ev.stage("attest", "done", f"FICO band {out['fico_band']} attested")
         return att
 
-    def _accept_offer(self, st: BankState, msg: dict[str, Any], bands: dict[str, Any], rnd: int) -> dict[str, Any] | None:
-        """Validate a bank's options, recompute APR, emit guard flags; return the best option."""
+    def _evaluate(self, options: Any, bands: dict[str, Any]) -> pricing.Offer | None:
+        """Cheapest valid option over the borrower's horizon (pure: no events)."""
         loan = float(bands["loan_mid"])
-        options = msg.get("options")
         if not isinstance(options, list):
             return None
         best = None
@@ -251,11 +251,16 @@ class Coordinator:
             if not (0 < rate < 20 and 0 <= points <= 10 and 0 <= fees <= 50_000):
                 continue
             try:
-                o = pricing.make_offer(loan, rate, points, fees, int(bands["horizon_years"]), int(bands.get("term_years", 30)))
+                o = pricing.make_offer(loan, rate, points, fees, self.horizon, int(bands.get("term_years", 30)))
             except ArithmeticError:
                 continue
             if best is None or o.total_cost < best.total_cost:
                 best = o
+        return best
+
+    def _accept_offer(self, st: BankState, msg: dict[str, Any], bands: dict[str, Any], rnd: int) -> dict[str, Any] | None:
+        """Validate a bank's options, recompute APR, emit guard flags; return the best option."""
+        best = self._evaluate(msg.get("options"), bands)
         if best is None:
             return None
         stated = msg.get("apr_stated")
@@ -316,7 +321,7 @@ class Coordinator:
                 return
             st.round1 = st.final = offer
             ev.emit("bq.quote", bank=st.name, node_id=nid, round=1, model=st.model,
-                    horizon_years=bands["horizon_years"], **offer)
+                    horizon_years=self.horizon, **offer)
 
         sends = [(nid, {"kind": "quote_request", "session": self.session, "bands": wire_bands, "attestation": att, "round": 1})
                  for nid in states]
@@ -329,21 +334,33 @@ class Coordinator:
         ev.stage("round1", "done", f"{sum(1 for s in states.values() if s.round1)} sealed quotes")
 
     def _round2(self, states: dict[str, BankState], bands: dict[str, Any], att: dict[str, Any]) -> None:
+        """Each bank hears only its rank and how far behind the best offer it is (as a %).
+
+        It answers with a price ladder; the coordinator takes the smallest rung that
+        beats the best competing offer, or the deepest rung if none does. Banks never
+        learn the borrower's horizon, a competitor's price, or who the competitor is.
+        """
         ev = self.ev
         live = {nid: st for nid, st in states.items() if st.round1}
-        ev.stage("round2", "start", "Round 2: best competing total cost only")
+        ev.stage("round2", "start", "Round 2: rank and gap only")
         if len(live) < 2:
             ev.stage("round2", "done", "Not enough quotes to negotiate")
             return
+        order = sorted(live, key=lambda k: live[k].round1["total_cost"])
+        ev.emit("bq.round2", best_total=live[order[0]].round1["total_cost"], banks=len(live))
+        targets: dict[str, float] = {}
         sends = []
         for nid, st in live.items():
-            others = [o.round1["total_cost"] for k, o in live.items() if k != nid and o.round1]
-            best_other = round(min(others), 2)
-            ev.msg(COORD, nid, "counter_request", f"Best competing total: ${best_other:,.0f}", ["best_competing_total"], sealed=True)
-            self.ledger.learn(st.name, "best competing total cost (no bank named)")
+            own = st.round1["total_cost"]
+            targets[nid] = min(o.round1["total_cost"] for k, o in live.items() if k != nid)
+            gap = round(max((own - targets[nid]) / own * 100, 0.0), 2)
+            rank = order.index(nid) + 1
+            ev.msg(COORD, nid, "counter_request", f"You rank {rank} of {len(live)}; best offer is {gap:.1f}% cheaper",
+                   ["rank", "gap_pct"], sealed=True)
+            self.ledger.learn(st.name, "its rank and % gap to the best offer (no competitor named, no horizon)")
             sends.append((nid, {"kind": "counter_request", "session": self.session, "bands": bands, "attestation": att,
-                                "round": 2, "best_competing_total": best_other,
-                                "your_offer": {k: st.round1[k] for k in ("rate", "points", "fees", "total_cost")}}))
+                                "round": 2, "rank": rank, "of": len(live), "gap_pct": gap,
+                                "your_offer": {k: st.round1[k] for k in ("rate", "points", "fees")}}))
 
         def on_reply(nid: str, msg: dict[str, Any]) -> None:
             st = live[nid]
@@ -356,20 +373,34 @@ class Coordinator:
                 ev.emit("bq.guard", bank=st.name, node_id=nid, round=2, violation="outbound_blocked",
                         requested=exc.fields, detail=exc.detail, action="blocked")
                 return
-            ev.msg(nid, COORD, "counter", "Sealed counter", ["decision", "options"], sealed=True)
+            ev.msg(nid, COORD, "counter", "Sealed price ladder", ["decision", "ladder"], sealed=True)
             self._check_requests(st, msg, 2)
-            if msg.get("decision") != "improve":
+            ladder = msg.get("ladder")
+            if msg.get("decision") != "improve" or not isinstance(ladder, list):
                 ev.emit("bq.decline", bank=st.name, round=2, reason="held price", message=str(msg.get("note") or ""))
                 return
-            offer = self._accept_offer(st, msg, bands, 2)
-            if offer is None or offer["total_cost"] >= st.round1["total_cost"]:
+            rungs = []
+            for rung in ladder:
+                if not isinstance(rung, dict):
+                    continue
+                best = self._evaluate(rung.get("options"), bands)
+                if best is not None:
+                    rungs.append((float(rung.get("discount_pts") or 0), best, rung))
+            rungs.sort(key=lambda r: r[0])
+            chosen = next((r for r in rungs if r[1].total_cost < targets[nid] - 250), None)
+            if chosen is None and rungs:
+                chosen = min(rungs, key=lambda r: r[1].total_cost)
+            offer = self._accept_offer(st, chosen[2], bands, 2) if chosen else None
+            if offer is None or offer["total_cost"] >= st.round1["total_cost"] - 1:
                 ev.emit("bq.decline", bank=st.name, round=2, reason="no improvement", message=str(msg.get("note") or ""))
                 return
+            took = f"took the {chosen[0]:.2f}-point rung of a {len(rungs)}-rung ladder"
             ev.emit("bq.improve", bank=st.name, from_total=st.round1["total_cost"], to_total=offer["total_cost"],
-                    delta=round(st.round1["total_cost"] - offer["total_cost"], 2), message=str(msg.get("note") or ""))
+                    delta=round(st.round1["total_cost"] - offer["total_cost"], 2),
+                    message=(str(msg.get("note") or "") + f" (coordinator {took})").strip())
             st.final = offer
             ev.emit("bq.quote", bank=st.name, node_id=nid, round=2, model=st.model,
-                    horizon_years=bands["horizon_years"], **offer)
+                    horizon_years=self.horizon, **offer)
 
         for nid in self._exchange(sends, self.t.counter, self._isolated(live, 2, on_reply)):
             ev.emit("bq.decline", bank=live[nid].name, round=2, reason="timeout", message="No reply before the deadline")
@@ -396,7 +427,7 @@ class Coordinator:
             "winner": winner["bank"],
             "savings_vs_single_quote": round(max(typical - winner["total_cost"], 0.0), 2),
             "savings_vs_worst": round(max(r["total_cost"] for r in ranking) - winner["total_cost"], 2),
-            "horizon_years": bands["horizon_years"],
+            "horizon_years": self.horizon,
         }
         ev.emit("bq.verdict", **verdict)
         ev.stage("verdict", "done", f"Best: {winner['bank']}")
@@ -411,7 +442,7 @@ class Coordinator:
             "how points vs rate trade off, what the market average is, and any flagged lender behaviour. "
             "Use only the numbers provided. Do not use headings."
         )
-        prompt = json.dumps({"verdict": verdict, "bands": {k: bands[k] for k in ("loan_band", "ltv_band", "horizon_years")},
+        prompt = json.dumps({"verdict": verdict, "bands": {k: bands[k] for k in ("loan_band", "ltv_band")},
                              "market_30y_avg": market}, default=str)
         wrote = False
         stream = None

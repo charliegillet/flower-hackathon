@@ -12,9 +12,9 @@ from typing import Any
 # Fields each message kind may carry across the grid.
 ALLOWED_FIELDS: dict[str, set[str]] = {
     "hello": {"kind"},
-    "hello_reply": {"kind", "role", "name", "org_kind", "model", "location"},
+    "hello_reply": {"kind", "role", "name", "org_kind", "model", "location", "bank_id"},
     "bands_request": {"kind", "session"},
-    "bands": {"kind", "session", "bands", "token", "withheld"},
+    "bands": {"kind", "session", "bands", "token", "withheld", "horizon_years"},
     "attest_request": {"kind", "session", "token"},
     "attestation": {"kind", "session", "fico_band", "expires", "sig", "bureau"},
     "quote_request": {"kind", "session", "bands", "attestation", "round"},
@@ -22,18 +22,22 @@ ALLOWED_FIELDS: dict[str, set[str]] = {
         "kind", "session", "round", "bank", "eligible", "reason", "options",
         "apr_stated", "note", "request_fields", "model", "attestation_ok",
     },
-    "counter_request": {"kind", "session", "bands", "attestation", "round", "best_competing_total", "your_offer"},
+    "counter_request": {"kind", "session", "bands", "attestation", "round", "rank", "of", "gap_pct", "your_offer"},
     "counter": {
-        "kind", "session", "round", "bank", "decision", "options", "apr_stated",
+        "kind", "session", "round", "bank", "decision", "ladder",
         "note", "request_fields", "model", "attestation_ok",
     },
     "error": {"kind", "message"},
 }
 
 # Band fields the borrower may disclose; anything else in `bands` is blocked.
+# The stay horizon is deliberately absent: it never leaves the borrower's side of the
+# coordinator. Ranges only; flags are yes/no.
 ALLOWED_BAND_FIELDS = {
     "loan_band", "loan_mid", "ltv_band", "dti_band", "occupancy",
-    "term_years", "property_state", "horizon_years", "product",
+    "term_years", "property_state", "product",
+    "asset_band", "tenure_band", "employment_status", "residency", "purpose",
+    "derogatory", "fico_self_reported",
 }
 
 # Raw fields that must never cross the grid in any payload.

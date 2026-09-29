@@ -12,6 +12,8 @@ from typing import Any
 from .. import attest, pricing
 from ..llm import LLM
 
+LADDER_STEP = 0.05  # points of margin between ladder rungs
+
 
 def _verify(msg: dict[str, Any], cfg: dict[str, Any]) -> str | None:
     """Return the attested FICO band, or None if the signature does not verify."""
@@ -102,54 +104,54 @@ def handle(msg: dict[str, Any], cfg: dict[str, Any], llm: LLM) -> dict[str, Any]
             note=_pitch(llm, sheet, best, bands, bool(sheet.get("greedy"))),
         )
 
-    # Round 2: decide whether to improve against the best competing total cost.
-    your = msg.get("your_offer") or {}
-    target = float(msg.get("best_competing_total") or 0)
-    current_total = float(your.get("total_cost") or 0)
+    # Round 2. The bank never learns the borrower's horizon or any competitor's price:
+    # only its rank and how far behind the best offer it is (as a %). It opens a
+    # price ladder as deep as it chooses; the coordinator takes the smallest rung
+    # that wins, so a deep ladder only costs margin when it is needed to win.
+    rank, of = msg.get("rank"), msg.get("of")
+    try:
+        gap = max(float(msg.get("gap_pct") or 0.0), 0.0)
+    except (TypeError, ValueError):
+        gap = 0.0
     headroom = max(sheet["margin_pts"] - sheet["floor_pts"], 0.0)
     if not sheet.get("reprice", True):  # bank policy, enforced in code
         return _quote_reply("counter", msg, sheet, cfg, decision="hold",
                             note=sheet.get("round2_message", "Holding our round-1 price."))
+    if gap <= 0:
+        return _quote_reply("counter", msg, sheet, cfg, decision="hold", note="We already hold the best offer.")
+    if headroom <= 0.05:
+        return _quote_reply("counter", msg, sheet, cfg, decision="hold", note="We are at our floor and cannot go lower.")
 
-    # Code computes the exact outcome of each choice; the model only picks one.
-    def total_at(discount: float) -> float:
-        return pricing.best_option(pricing.price_from_sheet(sheet, bands, fico, extra_discount_pts=discount)["options"]).total_cost
-
-    steps = [round(i * 0.05, 3) for i in range(int(headroom / 0.05) + 1)] + [headroom]
-    win = next((d for d in steps if total_at(d) < target - 250), None)
-    at_max = total_at(headroom)
-    choices = {"hold": 0.0, "max": headroom}
-    lines = [f"A) hold: total ${current_total:,.0f} (loses by ${max(current_total - target, 0):,.0f})" if current_total > target
-             else f"A) hold: total ${current_total:,.0f} (already best)"]
-    if win is not None:
-        choices["win"] = win
-        lines.append(f"B) win: discount {win:.2f} points -> total ${total_at(win):,.0f} (beats the best competitor)")
-    lines.append(f"C) max: discount {headroom:.2f} points (your floor) -> total ${at_max:,.0f}"
-                 + (" (still loses)" if at_max >= target else ""))
+    depths = {"hold": 0.0, "moderate": round(headroom / 2, 3), "floor": headroom}
     proposal = llm.complete_json(
         f"You are the round-2 pricing strategist for {sheet['name']}, {sheet.get('persona', 'a lender')}. "
-        f"Strategy: {sheet.get('strategy', 'compete when profitable')}. Pick exactly one option. "
-        'Return {"choice": "hold"|"win"|"max", "message": "one short sentence to the borrower"}.',
-        "Best competing total cost (sealed, lender not named): " + f"${target:,.0f}\n" + "\n".join(lines),
+        f"Strategy: {sheet.get('strategy', 'compete when profitable')}. Decide how deep a price ladder to open. "
+        "The neutral coordinator only takes the smallest rung that wins, so a deeper ladder costs margin only "
+        "when it is needed to win. "
+        'Return {"choice": "hold"|"moderate"|"floor", "message": "one short sentence to the borrower"}.',
+        f"You rank {rank} of {of}. The best competing offer costs the borrower {gap:.1f}% less over their "
+        f"horizon (competitor not named). Your margin headroom: {headroom:.2f} points. "
+        f"moderate = up to {depths['moderate']:.2f} points, floor = up to {headroom:.2f} points.",
         max_tokens=900,
     )
     choice = str((proposal or {}).get("choice", "")).lower()
-    if choice not in choices:  # no or invalid model answer: deterministic policy
-        choice = "win" if "win" in choices else ("hold" if current_total <= target else "max")
-    discount = min(max(choices[choice], 0.0), headroom)  # code enforces the floor
+    if choice not in depths:  # no or invalid model answer: deterministic policy
+        choice = "floor"
+    limit = min(depths[choice], headroom)  # code enforces the floor
     message = str((proposal or {}).get("message") or "")[:220]
-    if discount <= 0:
-        reason = "at floor - cannot go lower" if headroom <= 0.05 else "holding round-1 price"
-        return _quote_reply("counter", msg, sheet, cfg, decision="hold", note=message or reason)
+    if limit <= 0:
+        return _quote_reply("counter", msg, sheet, cfg, decision="hold", note=message or "Holding our round-1 price.")
 
-    priced = pricing.price_from_sheet(sheet, bands, fico, extra_discount_pts=discount)
-    best = pricing.best_option(priced["options"])
-    if current_total and best.total_cost >= current_total - 1:
-        return _quote_reply("counter", msg, sheet, cfg, decision="hold", note=message or "no meaningful improvement available")
+    ladder = []
+    steps = [round(i * LADDER_STEP, 3) for i in range(1, int(limit / LADDER_STEP) + 1)]
+    for d in sorted(set(steps + [round(limit, 3)])):
+        priced = pricing.price_from_sheet(sheet, bands, fico, extra_discount_pts=d)
+        best = pricing.best_option(priced["options"])
+        ladder.append({"discount_pts": d, "options": [o.to_dict() for o in priced["options"]],
+                       "apr_stated": _stated_apr(sheet, best)})
     return _quote_reply(
         "counter", msg, sheet, cfg,
         decision="improve",
-        options=[o.to_dict() for o in priced["options"]],
-        apr_stated=_stated_apr(sheet, best),
-        note=message or f"Improved by {discount:.2f} points of margin.",
+        ladder=ladder,
+        note=message or f"Opened a price ladder down to {limit:.2f} points of margin.",
     )

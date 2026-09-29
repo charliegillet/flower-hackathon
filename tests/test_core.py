@@ -213,3 +213,25 @@ def test_run_budget_is_respected_when_a_bank_is_silent(monkeypatch):
     grid.close()
     assert events[-1]["type"] == "bq.done" and events[-1]["elapsed_s"] < 28.0
     assert any(e["type"] == "bq.decline" and e["reason"] == "timeout" for e in events)
+
+
+def test_stay_horizon_never_reaches_a_bank(monkeypatch):
+    import sim.inprocess as inproc
+
+    real = inproc.handle_node_message
+    seen: list[dict] = []
+
+    def spy(msg, cfg, llm):
+        if cfg.get("role") == "bank":
+            seen.append(msg)
+        return real(msg, cfg, llm)
+
+    monkeypatch.setattr(inproc, "handle_node_message", spy)
+    grid = build_federation(use_llm=False, latency=False)
+    events: list[dict] = []
+    verdict = Coordinator(grid, Emitter(events.append), NO_LLM, timeouts=Timeouts(5, 5, 5, 10, 10), mode="sim").run(
+        "best 30-year fixed, I plan to stay about 12 years")
+    grid.close()
+    assert verdict["horizon_years"] == 12
+    assert seen and all("horizon" not in json.dumps(m) for m in seen)
+    assert any(m.get("kind") == "counter_request" and "gap_pct" in m and "best_competing_total" not in m for m in seen)

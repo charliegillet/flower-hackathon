@@ -32,6 +32,7 @@ The narrative text also streams as standard Responses events:
 | `bq.quote` | `bank`, `node_id`, `round`, `model`, `rate` (% e.g. 6.875), `points` (% of loan), `fees` ($), `apr` (% recomputed by coordinator), `apr_stated` (% claimed by bank or null), `monthly_pi` ($), `total_cost` ($ over horizon), `horizon_years`, `note` (bank's short pitch) | each accepted quote |
 | `bq.guard` | `bank` (or borrower/bureau name when `round` is 0), `node_id`, `round` (0 = before bidding), `violation` (`requested_fields`/`apr_mismatch`/`outbound_blocked`), `requested` (list), `detail`, `action` (`blocked`/`flagged`) | the guard intervened |
 | `bq.decline` | `bank`, `round`, `reason`, `message` | bank declined to quote or to improve |
+| `bq.round2` | `best_total` ($, cheapest round-1 total over the horizon; shown to the borrower only), `banks` | round 2 opens |
 | `bq.improve` | `bank`, `from_total`, `to_total`, `delta` ($ saved, positive), `message` | round-2 improvement |
 | `bq.market` | `pmms_30y` (%), `as_of` (date string), `source` (url) | market context |
 | `bq.verdict` | `ranking` [ {`bank`,`rate`,`points`,`fees`,`apr`,`total_cost`,`monthly_pi`,`flags` (list of strings)} ] sorted best first, `winner` (bank), `savings_vs_single_quote` ($, winner vs the median round-1 total among unflagged lenders; never negative), `savings_vs_worst` ($), `horizon_years` | final ranking |

@@ -28,7 +28,6 @@ def compute_bands(profile: dict[str, Any]) -> dict[str, Any]:
         "occupancy": profile.get("occupancy", "primary"),
         "term_years": term,
         "property_state": profile.get("property_state", "CA"),
-        "horizon_years": int(profile.get("horizon_years", 7)),
         "product": profile.get("product", "30-year fixed"),
     }
 
@@ -45,5 +44,7 @@ def handle(msg: dict[str, Any], cfg: dict[str, Any], llm: LLM) -> dict[str, Any]
         "bands": compute_bands(profile),
         # One-time consent token the borrower registered with the bureau.
         "token": profile["bureau_consent_token"],
+        # For the coordinator's ranking only; it is never forwarded to a bank.
+        "horizon_years": int(profile.get("horizon_years", 7)),
         "withheld": WITHHELD,
     }
