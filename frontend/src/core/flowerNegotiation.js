@@ -116,13 +116,27 @@ export async function flowerAvailable() {
 export function startFlowerNegotiation(bands, onEvent, { horizonYears = 7, consentToken = null } = {}) {
   const ctrl = new AbortController();
   const adapt = createAdapter(bands);
+  let finished = false;
+  const emit = (ev) => {
+    if (ev.type === 'done' || ev.type === 'error') finished = true;
+    onEvent(ev);
+  };
   (async () => {
+    let started = false;
     try {
-      const { runId, mode } = await flower.start({ bands, horizonYears, consentToken });
-      onEvent({ t: 0, type: 'started', runId, mode });
-      await flower.stream(runId, (e) => adapt(e).forEach(onEvent), ctrl.signal);
+      const { runId, mode } = await flower.start({ bands, horizonYears, consentToken }, ctrl.signal);
+      if (ctrl.signal.aborted) return;
+      started = true;
+      emit({ t: 0, type: 'started', runId, mode });
+      await flower.stream(runId, (e) => adapt(e).forEach(emit), ctrl.signal);
+      if (!finished && !ctrl.signal.aborted) emit({ t: 0, type: 'error', text: 'The Flower run ended before completing.' });
     } catch (err) {
-      if (!ctrl.signal.aborted) onEvent({ t: 0, type: 'error', text: err.message });
+      if (ctrl.signal.aborted) return;
+      if (!started && (err.status === 422 || err.status === 429)) {
+        emit({ t: 0, type: 'fallback', reason: err.status === 429 ? 'busy' : 'unsupported', text: err.message });
+      } else {
+        emit({ t: 0, type: 'error', text: err.message });
+      }
     }
   })();
   return { cancel: () => ctrl.abort() };
