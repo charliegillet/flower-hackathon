@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, getToken, setToken } from './api.js';
-import AuthForm from './components/AuthForm.jsx';
+import Landing from './components/Landing.jsx';
 import Profile from './components/Profile.jsx';
 import Settings from './components/Settings.jsx';
 import ApplicationList from './components/ApplicationList.jsx';
@@ -74,18 +74,12 @@ export default function App() {
 
   if (!user) {
     return (
-      <div className="auth-page">
-        <div className="auth-brand">
-          <h1>Flower Finance</h1>
-          <p>Agent-negotiated loans. Your exact numbers never leave your device.</p>
-        </div>
-        <AuthForm
-          onAuth={(u) => {
-            setUser(u);
-            setView(u.role === 'bank' ? 'applications' : 'apply');
-          }}
-        />
-      </div>
+      <Landing
+        onAuth={(u) => {
+          setUser(u);
+          setView(u.role === 'bank' ? 'applications' : 'apply');
+        }}
+      />
     );
   }
 

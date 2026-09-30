@@ -1,79 +1,123 @@
 import { useState } from 'react';
 import { api, setToken } from '../api.js';
 
-export default function AuthForm({ onAuth }) {
-  const [mode, setMode] = useState('login');
+const COPY = {
+  login: {
+    title: 'Welcome back',
+    sub: "Log in to see your agent's latest offers.",
+    submit: 'Log in',
+    swapLead: 'New here?',
+    swapLabel: 'Create an account',
+    next: 'register',
+  },
+  register: {
+    title: 'Create your account',
+    sub: 'Set up your agent in about two minutes.',
+    submit: 'Create account',
+    swapLead: 'Already have an account?',
+    swapLabel: 'Log in',
+    next: 'login',
+  },
+};
+
+export default function AuthForm({ onAuth, mode, onMode }) {
   const [form, setForm] = useState({ name: '', email: '', password: '', role: 'customer', bankName: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const copy = COPY[mode] || COPY.login;
 
-  const set = (key) => (e) => setForm({ ...form, [key]: e.target.value });
+  const choose = (next) => {
+    setError('');
+    onMode(next);
+  };
+
+  const set = (key) => (e) => {
+    const value = e.target.value;
+    setForm((prev) => ({ ...prev, [key]: value }));
+  };
 
   const submit = async (e) => {
     e.preventDefault();
+    if (busy) return;
     setBusy(true);
     setError('');
+    const email = form.email.trim().toLowerCase();
     try {
       const { token, user } =
-        mode === 'login'
-          ? await api.login({ email: form.email, password: form.password })
-          : await api.register(form);
+        mode === 'register'
+          ? await api.register({ ...form, email })
+          : await api.login({ email, password: form.password });
       setToken(token);
       onAuth(user);
     } catch (err) {
-      setError(err.message);
+      setError(err?.message || 'Something went wrong. Please try again.');
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <form className="card form auth" onSubmit={submit}>
-      <h2>{mode === 'login' ? 'Log in' : 'Create account'}</h2>
-      <div className="tabs">
-        <button type="button" className={mode === 'login' ? 'active' : ''} onClick={() => setMode('login')}>
-          Log in
-        </button>
-        <button type="button" className={mode === 'register' ? 'active' : ''} onClick={() => setMode('register')}>
-          Register
-        </button>
+    <div className="landing-card">
+      <div className="landing-modes" role="group" aria-label="Choose an option">
+        <button type="button" aria-pressed={mode === 'login'} disabled={busy} onClick={() => choose('login')}>Log in</button>
+        <button type="button" aria-pressed={mode === 'register'} disabled={busy} onClick={() => choose('register')}>Register</button>
       </div>
 
-      {mode === 'register' && (
-        <>
-          <label>
-            Full name
-            <input required value={form.name} onChange={set('name')} />
-          </label>
-          <label>
-            I am a…
-            <select value={form.role} onChange={set('role')}>
-              <option value="customer">Loan applicant</option>
-              <option value="bank">Bank reviewer</option>
-            </select>
-          </label>
-          {form.role === 'bank' && (
-            <label>
-              Bank name
-              <input required value={form.bankName} onChange={set('bankName')} />
-            </label>
-          )}
-        </>
-      )}
+      <h2>{copy.title}</h2>
+      <p className="landing-sub">{copy.sub}</p>
 
-      <label>
-        Email
-        <input required type="email" value={form.email} onChange={set('email')} />
-      </label>
-      <label>
-        Password
-        <input required type="password" minLength="6" value={form.password} onChange={set('password')} />
-      </label>
+      <form onSubmit={submit}>
+        {mode === 'register' && (
+          <>
+            <div className="landing-field">
+              <label htmlFor="name">Full name</label>
+              <input id="name" required value={form.name} onChange={set('name')} autoComplete="name" />
+            </div>
+            <div className="landing-field">
+              <label htmlFor="role">I am a…</label>
+              <select id="role" value={form.role} onChange={set('role')}>
+                <option value="customer">Loan applicant</option>
+                <option value="bank">Bank reviewer</option>
+              </select>
+            </div>
+            {form.role === 'bank' && (
+              <div className="landing-field">
+                <label htmlFor="bankName">Bank name</label>
+                <input id="bankName" required value={form.bankName} onChange={set('bankName')} />
+              </div>
+            )}
+          </>
+        )}
 
-      {error && <p className="error">{error}</p>}
-      <button type="submit" disabled={busy}>
-        {busy ? 'Please wait…' : mode === 'login' ? 'Log in' : 'Create account'}
-      </button>
-    </form>
+        <div className="landing-field">
+          <label htmlFor="email">Email</label>
+          <input id="email" name="email" type="email" autoComplete="email" required value={form.email} onChange={set('email')} />
+        </div>
+        <div className="landing-field">
+          <label htmlFor="password">Password</label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
+            required
+            minLength={mode === 'register' ? 8 : 6}
+            value={form.password}
+            onChange={set('password')}
+          />
+          {mode === 'register' && <p className="landing-hint">At least 8 characters.</p>}
+        </div>
+
+        {error && <p className="landing-note">{error}</p>}
+        <button className="landing-submit" type="submit" disabled={busy}>
+          {busy ? 'Please wait…' : copy.submit}
+        </button>
+      </form>
+
+      <p className="landing-switch">
+        {copy.swapLead}{' '}
+        <button type="button" disabled={busy} onClick={() => choose(copy.next)}>{copy.swapLabel}</button>
+      </p>
+    </div>
   );
 }

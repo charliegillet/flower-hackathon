@@ -12,10 +12,20 @@ async function request(path, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
-  const res = await fetch(`/api${path}`, { ...options, headers });
+  let res;
+  try {
+    res = await fetch(`/api${path}`, { ...options, headers });
+  } catch {
+    const err = new Error('Could not reach the server. Check that the backend is running, then try again.');
+    err.network = true;
+    throw err;
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    const err = new Error(body.error || `Request failed: ${res.status}`);
+    const fallback = res.status >= 500
+      ? 'Could not reach the server. Check that the backend is running, then try again.'
+      : `Request failed: ${res.status}`;
+    const err = new Error(body.error || fallback);
     err.status = res.status;
     err.unsupported = !!body.unsupported;
     throw err;
